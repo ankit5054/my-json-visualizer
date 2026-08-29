@@ -11,7 +11,8 @@ class JsonVisualizer {
     this.filterBar = document.getElementById('filterBar');
     this.tableContainer = document.getElementById('tableContainer');
     this.treeContainer = document.getElementById('treeContainer');
-    this.view = 'table'; // 'table' | 'tree'
+    this.formattedContainer = document.getElementById('formattedContainer');
+    this.view = 'formatted'; // 'table' | 'tree'
 
     this.rootData = null;
     this.pathStack = [];
@@ -64,10 +65,12 @@ class JsonVisualizer {
       });
     };
 
+    document.getElementById('btnFormatted').onclick = () => this.setView('formatted');
     document.getElementById('btnTable').onclick = () => this.setView('table');
     document.getElementById('btnTree').onclick = () => this.setView('tree');
 
-    this.tableContainer.style.display = '';
+    this.formattedContainer.style.display = 'block';
+    this.tableContainer.style.display = 'none';
     this.treeContainer.style.display = 'none';
 
     this.processJSON();
@@ -75,14 +78,17 @@ class JsonVisualizer {
 
   setView(view) {
     this.view = view;
-    document.getElementById('btnTable').classList.toggle('active', view === 'table');
-    document.getElementById('btnTree').classList.toggle('active', view === 'tree');
+    ['btnFormatted','btnTable','btnTree'].forEach(id =>
+      document.getElementById(id).classList.toggle('active', id === `btn${view.charAt(0).toUpperCase()+view.slice(1)}`)
+    );
+    this.formattedContainer.style.display = view === 'formatted' ? 'block' : 'none';
     this.tableContainer.style.display = view === 'table' ? '' : 'none';
     this.treeContainer.style.display = view === 'tree' ? 'block' : 'none';
     const currentData = this.pathStack[this.pathStack.length - 1]?.data;
-    this.filterBar.style.display = view === 'tree' ? 'none' :
-      (Array.isArray(currentData) && currentData.length > 1 ? 'flex' : 'none');
+    this.filterBar.style.display = view === 'table' && Array.isArray(currentData) && currentData.length > 1 ? 'flex' : 'none';
     if (view === 'tree') this.renderTreeView();
+    if (view === 'formatted') this.renderFormattedView();
+    if (view === 'table') this.renderCurrentLevel();
   }
 
   renderTreeView() {
@@ -317,14 +323,37 @@ class JsonVisualizer {
     this.renderCurrentLevel();
   }
 
+  renderFormattedView() {
+    if (!this.rootData) return;
+    const pre = document.getElementById('formattedPre');
+    pre.innerHTML = this.syntaxHighlight(JSON.stringify(this.rootData, null, 2));
+  }
+
+  syntaxHighlight(json) {
+    return json
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(
+        /("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        match => {
+          if (/^"/.test(match)) {
+            return /:$/.test(match)
+              ? `<span class="fmt-key">${match}</span>`
+              : `<span class="fmt-string">${match}</span>`;
+          }
+          if (/true|false/.test(match)) return `<span class="fmt-bool">${match}</span>`;
+          if (/null/.test(match)) return `<span class="fmt-null">${match}</span>`;
+          return `<span class="fmt-number">${match}</span>`;
+        }
+      );
+  }
+
   renderCurrentLevel() {
     this.renderBreadcrumbs();
-    if (this.view === 'tree') {
-      this.renderTreeView();
-      return;
-    }
-    this.tableContainer.style.display = '';
+    if (this.view === 'formatted') { this.renderFormattedView(); return; }
+    if (this.view === 'tree') { this.renderTreeView(); return; }
+    this.formattedContainer.style.display = 'none';
     this.treeContainer.style.display = 'none';
+    this.tableContainer.style.display = '';
 
     const current = this.pathStack[this.pathStack.length - 1];
     const targetData = current.data;

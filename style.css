@@ -145,6 +145,35 @@ textarea {
 
 .table-container { flex: 1; overflow: auto; }
 .tree-container { flex: 1; overflow: auto; display: none; padding: 12px 16px; font-family: monospace; font-size: 12px; }
+.formatted-container { flex: 1; overflow: auto; display: none; }
+
+.formatted-toolbar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 12px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 1;
+}
+
+.formatted-container pre {
+  margin: 0;
+  padding: 14px 18px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.fmt-key    { color: #9cdcfe; }
+.fmt-string { color: #ce9178; }
+.fmt-number { color: #b5cea8; }
+.fmt-bool   { color: #569cd6; }
+.fmt-null   { color: #569cd6; font-style: italic; }
+.fmt-punct  { color: #858585; }
 
 .tree-node { user-select: none; }
 

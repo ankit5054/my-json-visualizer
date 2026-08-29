@@ -3,7 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JSON Visualizer</title>
+
+  <title>JSON Visualizer — Explore & Format JSON Online</title>
+  <meta name="description" content="Free online JSON visualizer. Paste JSON, GraphQL variables, or API responses and explore them as a table or tree. Auto-corrects malformed JSON, supports filtering, drill-down, and formatted copy.">
+  <meta name="keywords" content="JSON visualizer, JSON viewer, JSON formatter, JSON explorer, JSON table, GraphQL variables viewer, API response viewer, online JSON tool, JSON tree view">
+  <meta name="author" content="Ankit Mishra">
+  <link rel="canonical" href="https://jsonviewer.iamankit.in/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://jsonviewer.iamankit.in/">
+  <meta property="og:title" content="JSON Visualizer — Explore & Format JSON Online">
+  <meta property="og:description" content="Paste any JSON or GraphQL payload and instantly explore it as a table or tree. Auto-corrects malformed JSON. No install, no dependencies.">
+  <meta property="og:site_name" content="JSON Visualizer">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:url" content="https://jsonviewer.iamankit.in/">
+  <meta name="twitter:title" content="JSON Visualizer — Explore & Format JSON Online">
+  <meta name="twitter:description" content="Paste any JSON or GraphQL payload and instantly explore it as a table or tree. Auto-corrects malformed JSON. No install, no dependencies.">
+  <meta name="twitter:creator" content="@iamankit">
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "JSON Visualizer",
+    "url": "https://jsonviewer.iamankit.in/",
+    "description": "Free online JSON visualizer. Explore JSON and GraphQL payloads as table or tree views. Auto-corrects malformed JSON.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Ankit Mishra", "url": "https://iamankit.in" }
+  }
+  </script>
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -32,7 +67,6 @@
     <div class="editor-pane">
       <div class="pane-header">
         Raw JSON Input
-        <button class="btn btn-copy" id="copyBtn">Copy</button>
       </div>
       <div class="error-banner" id="errorBanner">Invalid JSON</div>
       <textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
@@ -42,7 +76,8 @@
       <div class="breadcrumb-bar">
         <span id="breadcrumbBar">Path: <span class="crumb-link">root</span></span>
         <div class="view-toggle">
-          <button class="toggle-btn active" id="btnTable">Table</button>
+          <button class="toggle-btn active" id="btnFormatted">Formatted</button>
+          <button class="toggle-btn" id="btnTable">Table</button>
           <button class="toggle-btn" id="btnTree">Tree</button>
         </div>
       </div>
@@ -59,6 +94,13 @@
         </select>
         <input id="filterVal" type="text" placeholder="value..." />
         <button class="btn" id="filterClear">&#x2715;</button>
+      </div>
+
+      <div class="formatted-container" id="formattedContainer">
+        <div class="formatted-toolbar">
+          <button class="btn btn-copy" id="copyBtn">Copy</button>
+        </div>
+        <pre id="formattedPre"></pre>
       </div>
 
       <div class="table-container" id="tableContainer">
