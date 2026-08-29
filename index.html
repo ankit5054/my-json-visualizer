@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Postman Multi-Level Table Preview</title>
+  <style>
+    :root {
+      --bg-main: #1e1e1e;
+      --bg-side: #252526;
+      --bg-header: #2d2d2d;
+      --border-color: #3c3c3c;
+      --text-main: #cccccc;
+      --text-muted: #858585;
+      --accent-color: #0e639c;
+      --hover-bg: #2a2d2e;
+      --type-string: #ce9178;
+      --type-number: #b5cea8;
+      --type-boolean: #569cd6;
+      --type-null: #569cd6;
+      --type-object: #4ec9b0;
+      --nested-bg: #181818;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .app-header {
+      background-color: var(--bg-header);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .app-title { font-size: 14px; font-weight: 600; color: #ffffff; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .editor-pane {
+      background-color: var(--bg-side);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pane-header {
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 12px;
+      padding: 12px;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+    }
+
+    .btn {
+      background-color: var(--accent-color);
+      color: #ffffff;
+      border: none;
+      padding: 5px 12px;
+      font-size: 12px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .btn:hover { opacity: 0.9; }
+
+    .preview-pane {
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-main);
+      overflow: hidden;
+    }
+
+    .breadcrumb-bar {
+      padding: 10px 14px;
+      font-size: 12px;
+      font-family: monospace;
+      background-color: var(--bg-header);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .crumb-link {
+      color: var(--type-object);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .crumb-link:hover { color: #ffffff; }
+    .crumb-separator { color: var(--text-muted); }
+
+    .table-container {
+      flex: 1;
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background-color: var(--bg-header);
+      color: #9cdcfe;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+      border-right: 1px solid var(--border-color);
+      font-weight: 600;
+      white-space: nowrap;
+      z-index: 2;
+    }
+
+    td {
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--border-color);
+      border-right: 1px solid var(--border-color);
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: monospace;
+      vertical-align: top;
+    }
+
+    tr:hover td { background-color: var(--hover-bg); }
+
+    .inline-object-preview {
+      background-color: var(--nested-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 11px;
+    }
+
+    .inline-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 2px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    }
+
+    .inline-row:last-child { border-bottom: none; }
+    .inline-key { color: #9cdcfe; font-weight: 500; }
+
+    .val-string { color: var(--type-string); }
+    .val-number { color: var(--type-number); }
+    .val-boolean { color: var(--type-boolean); }
+    .val-null { color: var(--type-null); font-style: italic; }
+
+    .val-drilldown-btn {
+      background: none;
+      border: 1px solid var(--accent-color);
+      color: #ffffff;
+      background-color: rgba(14, 99, 156, 0.3);
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-family: monospace;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .val-drilldown-btn:hover { background-color: var(--accent-color); }
+
+    .error-banner {
+      background-color: #5a1d1d;
+      color: #f88;
+      padding: 8px 12px;
+      font-size: 12px;
+      display: none;
+      border-bottom: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="app-title">Postman Multi-Level Table Preview</div>
+    <button class="btn" id="parseBtn">Render Table</button>
+  </header>
+
+  <div class="workspace">
+    <div class="editor-pane">
+      <div class="pane-header">Raw JSON Input</div>
+      <div class="error-banner" id="errorBanner">Invalid JSON</div>
+      <textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
+    </div>
+
+    <div class="preview-pane">
+      <div class="breadcrumb-bar" id="breadcrumbBar">
+        Path: <span class="crumb-link">root</span>
+      </div>
+      
+      <div class="table-container">
+        <table>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+class PostmanMultiLevelApp {
+  constructor() {
+    this.jsonInput = document.getElementById('jsonInput');
+    this.parseBtn = document.getElementById('parseBtn');
+    this.errorBanner = document.getElementById('errorBanner');
+    this.breadcrumbBar = document.getElementById('breadcrumbBar');
+    this.thead = document.getElementById('tableHead');
+    this.tbody = document.getElementById('tableBody');
+
+    this.rootData = null;
+    this.pathStack = [];
+    
+    this.jsonInput.value = JSON.stringify({
+      status: "success",
+      code: 200,
+      metadata: { page: 1, limit: 10, total: 50 },
+      users: [
+        { 
+          id: 101, 
+          name: "Alice", 
+          role: "Admin", 
+          profile: { title: "Lead Architect", department: "Engineering" },
+          settings: { theme: "dark", notifications: true } 
+        },
+        { 
+          id: 102, 
+          name: "Bob", 
+          role: "Developer", 
+          profile: { title: "Backend Engineer", department: "Infrastructure" },
+          settings: { theme: "light", notifications: false } 
+        }
+      ]
+    }, null, 2);
+
+    this.bindEvents();
+    this.processJSON();
+  }
+
+  bindEvents() {
+    this.parseBtn.addEventListener('click', () => this.processJSON());
+  }
+
+  processJSON() {
+    const rawVal = this.jsonInput.value.trim();
+    if (!rawVal) return;
+
+    try {
+      this.rootData = JSON.parse(rawVal);
+      this.errorBanner.style.display = 'none';
+      
+      this.pathStack = [{ label: 'root', data: this.rootData }];
+      this.renderCurrentLevel();
+    } catch (err) {
+      this.errorBanner.textContent = `JSON Error: ${err.message}`;
+      this.errorBanner.style.display = 'block';
+    }
+  }
+
+  renderCurrentLevel() {
+    this.renderBreadcrumbs();
+
+    const current = this.pathStack[this.pathStack.length - 1];
+    const targetData = current.data;
+
+    let rows = [];
+    if (Array.isArray(targetData)) {
+      rows = targetData;
+    } else if (typeof targetData === 'object' && targetData !== null) {
+      rows = [targetData];
+    } else {
+      rows = [{ value: targetData }];
+    }
+
+    const headers = Array.from(new Set(rows.flatMap(r => (typeof r === 'object' && r !== null) ? Object.keys(r) : ['value'])));
+
+    this.thead.innerHTML = `<tr><th>#</th>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+
+    this.tbody.innerHTML = '';
+    rows.forEach((row, rIdx) => {
+      const tr = document.createElement('tr');
+      let rowHtml = `<td>${rIdx + 1}</td>`;
+
+      headers.forEach(header => {
+        const val = (typeof row === 'object' && row !== null) ? row[header] : row;
+        rowHtml += `<td>${this.renderFormattedCell(val, header, rIdx, 0)}</td>`;
+      });
+
+      tr.innerHTML = rowHtml;
+      this.tbody.appendChild(tr);
+    });
+
+    // Delegated click handler: catches clicks on buttons and sub-buttons accurately
+    this.tbody.onclick = (e) => {
+      const btn = e.target.closest('[data-key]');
+      if (!btn) return;
+
+      const key = btn.getAttribute('data-key');
+      const rowIndex = parseInt(btn.getAttribute('data-rowindex'), 10);
+      const subKey = btn.getAttribute('data-subkey');
+
+      let selectedNode;
+      if (Array.isArray(targetData)) {
+        selectedNode = targetData[rowIndex][key];
+      } else {
+        selectedNode = targetData[key];
+      }
+
+      if (subKey && selectedNode && typeof selectedNode === 'object') {
+        selectedNode = selectedNode[subKey];
+      }
+
+      const pathLabel = subKey ? `${key}.${subKey}` : (Array.isArray(targetData) ? `${key}[${rowIndex}]` : key);
+      
+      this.pathStack.push({ label: pathLabel, data: selectedNode });
+      this.renderCurrentLevel();
+    };
+  }
+
+  renderFormattedCell(val, key, rowIndex, currentDepth, parentKey = null) {
+    if (val === null || val === undefined) return `<span class="val-null">null</span>`;
+    if (typeof val === 'boolean') return `<span class="val-boolean">${val}</span>`;
+    if (typeof val === 'number') return `<span class="val-number">${val}</span>`;
+    if (typeof val === 'string') return `<span class="val-string">${this.escapeHtml(val)}</span>`;
+
+    if (typeof val === 'object') {
+      if (!Array.isArray(val) && currentDepth === 0) {
+        const childKeys = Object.keys(val);
+        
+        let inlineHtml = `<div class="inline-object-preview">`;
+        childKeys.slice(0, 4).forEach(cKey => {
+          const childVal = val[cKey];
+          const isComplex = typeof childVal === 'object' && childVal !== null;
+
+          inlineHtml += `
+            <div class="inline-row">
+              <span class="inline-key">${cKey}:</span>
+              <span>
+                ${isComplex 
+                  ? `<button class="val-drilldown-btn" data-key="${key}" data-rowindex="${rowIndex}" data-subkey="${cKey}">View ${Array.isArray(childVal) ? 'Array' : 'Object'} &rarr;</button>`
+                  : this.renderFormattedCell(childVal, key, rowIndex, currentDepth + 1, cKey)
+                }
+              </span>
+            </div>`;
+        });
+        
+        if (childKeys.length > 4) {
+          inlineHtml += `<div style="margin-top:4px;"><button class="val-drilldown-btn" data-key="${key}" data-rowindex="${rowIndex}">+ ${childKeys.length - 4} more keys &rarr;</button></div>`;
+        } else {
+          inlineHtml += `<div style="margin-top:4px;"><button class="val-drilldown-btn" data-key="${key}" data-rowindex="${rowIndex}">Focus View &rarr;</button></div>`;
+        }
+        
+        inlineHtml += `</div>`;
+        return inlineHtml;
+      }
+
+      const label = Array.isArray(val) ? `Array[${val.length}]` : 'Object';
+      const attrSub = parentKey ? `data-subkey="${parentKey}"` : '';
+      return `<button class="val-drilldown-btn" data-key="${key}" data-rowindex="${rowIndex}" ${attrSub}>${label} &rarr;</button>`;
+    }
+
+    return String(val);
+  }
+
+  renderBreadcrumbs() {
+    this.breadcrumbBar.innerHTML = 'Path: ';
+    
+    this.pathStack.forEach((item, index) => {
+      const link = document.createElement('span');
+      link.className = 'crumb-link';
+      link.textContent = item.label;
+      
+      link.onclick = () => {
+        this.pathStack = this.pathStack.slice(0, index + 1);
+        this.renderCurrentLevel();
+      };
+
+      this.breadcrumbBar.appendChild(link);
+
+      if (index < this.pathStack.length - 1) {
+        const sep = document.createElement('span');
+        sep.className = 'crumb-separator';
+        sep.textContent = ' / ';
+        this.breadcrumbBar.appendChild(sep);
+      }
+    });
+  }
+
+  escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+}
+
+new PostmanMultiLevelApp();
+</script>
+</body>
+</html>
