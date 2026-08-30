@@ -60,7 +60,7 @@ class UIHandlers {
       clearBtn.onclick = () => {
         jsonInput.value = '';
         this.state.rootData = null;
-        this.state.pathStack = [{ label: '$', data: null }];
+        this.state.pathStack = [];
         this.state.view = 'formatted';
         errorBanner.style.display = 'none';
 
@@ -82,7 +82,7 @@ class UIHandlers {
         if (tableBody) tableBody.innerHTML = '';
         if (breadcrumbBar) {
           breadcrumbBar.style.visibility = 'hidden';
-          breadcrumbBar.innerHTML = 'Path: <span class="crumb-link">$</span>';
+          breadcrumbBar.innerHTML = 'Path:';
         }
         if (formattedPre) formattedPre.innerHTML = '';
 
@@ -238,7 +238,7 @@ class UIHandlers {
 
     if (!jsonInput || !jsonInput.value.trim()) {
       this.state.rootData = null;
-      this.state.pathStack = [{ label: '$', data: null }];
+      this.state.pathStack = [];
       this.state.view = 'formatted';
 
       const formattedContainer = document.getElementById('formattedContainer');
@@ -259,7 +259,7 @@ class UIHandlers {
       if (tableBody) tableBody.innerHTML = '';
       if (breadcrumbBar) {
         breadcrumbBar.style.visibility = 'hidden';
-        breadcrumbBar.innerHTML = 'Path: <span class="crumb-link">$</span>';
+        breadcrumbBar.innerHTML = 'Path:';
       }
       if (formattedPre) formattedPre.innerHTML = '';
       if (errorBanner) errorBanner.style.display = 'none';

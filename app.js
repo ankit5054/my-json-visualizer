@@ -46,7 +46,7 @@ class JsonVisualizer {
     document.getElementById('clearInputBtn').onclick = () => {
       this.jsonInput.value = '';
       this.rootData = null;
-      this.pathStack = [{ label: '$', data: null }];
+      this.pathStack = [];
       this.view = 'formatted';
       this.errorBanner.style.display = 'none';
 
@@ -57,7 +57,7 @@ class JsonVisualizer {
       this.thead.innerHTML = '';
       this.tbody.innerHTML = '';
       this.treeContainer.innerHTML = '';
-      this.breadcrumbBar.innerHTML = 'Path: <span class="crumb-link">$</span>';
+      this.breadcrumbBar.innerHTML = 'Path:';
       this.breadcrumbBar.style.visibility = 'hidden';
 
       const pre = this.formattedContainer.querySelector('#formattedPre');
