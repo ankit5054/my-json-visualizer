@@ -373,7 +373,7 @@ class JsonVisualizer {
     const prevKey = this.filterKey.value;
     this.filterKey.innerHTML = '<option value="">— key —</option>' +
       headers.map(h => `<option value="${h}" ${h === prevKey ? 'selected' : ''}>${h}</option>`).join('');
-    this.filterBar.style.display = Array.isArray(targetData) && rows.length > 1 ? 'flex' : 'none';
+    this.filterBar.style.display = this.view === 'table' && Array.isArray(targetData) && rows.length > 1 ? 'flex' : 'none';
 
     this.thead.innerHTML = `<tr><th>#</th>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
 
@@ -402,13 +402,16 @@ class JsonVisualizer {
       const rowIndex = parseInt(btn.getAttribute('data-rowindex'), 10);
       const subKey = btn.getAttribute('data-subkey');
 
-      let selectedNode = Array.isArray(targetData) ? targetData[rowIndex][key] : targetData[key];
+      const isParentArray = Array.isArray(targetData);
+      const rowObj = isParentArray ? targetData[rowIndex] : targetData;
+      let selectedNode = rowObj[key];
 
       if (subKey && selectedNode && typeof selectedNode === 'object') {
         selectedNode = selectedNode[subKey];
       }
 
-      const pathLabel = subKey ? `${key}.${subKey}` : (Array.isArray(targetData) ? `${key}[${rowIndex}]` : key);
+      const baseLabel = isParentArray ? `[${rowIndex}].${key}` : key;
+      const pathLabel = subKey ? `${baseLabel}.${subKey}` : baseLabel;
 
       this.pathStack.push({ label: pathLabel, data: selectedNode });
       this.renderCurrentLevel();
@@ -469,24 +472,18 @@ class JsonVisualizer {
               <span class="inline-key">${cKey}:</span>
               <span>
                 ${isComplex
-                  ? `<button class="val-drilldown-btn" data-key="${key}" data-rowindex="${rowIndex}" data-subkey="${cKey}">View ${Array.isArray(childVal) ? 'Array' : 'Object'} &rarr;</button>`
+                  ? `<button class="val-drilldown-btn" data-key="${key}" data-rowindex="${rowIndex}" data-subkey="${cKey}">${Array.isArray(childVal) ? `Array[${childVal.length}]` : 'Object'} &rarr;</button>`
                   : this.renderFormattedCell(childVal, key, rowIndex, currentDepth + 1, cKey)
                 }
               </span>
             </div>`;
         });
 
-        if (childKeys.length > 4) {
-          inlineHtml += `<div style="margin-top:4px;"><button class="val-drilldown-btn" data-key="${key}" data-rowindex="${rowIndex}">+ ${childKeys.length - 4} more keys &rarr;</button></div>`;
-        } else {
-          inlineHtml += `<div style="margin-top:4px;"><button class="val-drilldown-btn" data-key="${key}" data-rowindex="${rowIndex}">Focus View &rarr;</button></div>`;
-        }
-
         inlineHtml += `</div>`;
         return inlineHtml;
       }
 
-      const label = Array.isArray(val) ? `Array[${val.length}]` : 'Object';
+      const label = Array.isArray(val) ? `array[${val.length}]` : 'object';
       const attrSub = parentKey ? `data-subkey="${parentKey}"` : '';
       return `<button class="val-drilldown-btn" data-key="${key}" data-rowindex="${rowIndex}" ${attrSub}>${label} &rarr;</button>`;
     }

@@ -4,24 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>JSON Visualizer — Explore & Format JSON Online</title>
-  <meta name="description" content="Free online JSON visualizer. Paste JSON, GraphQL variables, or API responses and explore them as a table or tree. Auto-corrects malformed JSON, supports filtering, drill-down, and formatted copy.">
-  <meta name="keywords" content="JSON visualizer, JSON viewer, JSON formatter, JSON explorer, JSON table, GraphQL variables viewer, API response viewer, online JSON tool, JSON tree view">
+  <title>JSON Viewer — Free Online JSON Viewer, Formatter & Explorer</title>
+  <meta name="description" content="Free online JSON visualizer and viewer. Paste any JSON, API response, or GraphQL payload to explore it as a formatted view, interactive table, or tree. Auto-fixes malformed JSON, supports nested drill-down, filtering, breadcrumb navigation, and syntax highlighting. No install required.">
+  <meta name="keywords" content="JSON visualizer, JSON viewer, JSON formatter, JSON explorer, JSON editor, JSON parser, JSON beautifier, JSON prettifier, JSON pretty print, JSON pretty printer, JSON beautify online, JSON prettify online, JSON path finder, JSON pathfinder, JSON key finder, JSON key explorer, JSON key navigator, JSON key path, JSON nested key finder, JSON value finder, JSON field finder, JSON tree view, JSON table view, JSON drill down, JSON nested viewer, JSON online, JSON tool, free JSON viewer, JSON syntax highlighter, JSON validator, JSON lint, JSON linter, JSON checker, JSON reader, JSON browser, JSON data explorer, JSON structure viewer, JSON path navigator, JSON path viewer, JSON filter, JSON search, JSON query, JSON minifier, JSON compressor, JSON unminify, JSON uncompress, JSON decode, JSON encode, API response viewer, API JSON viewer, REST API response viewer, REST API debugger, GraphQL variables viewer, GraphQL JSON viewer, GraphQL response viewer, JSON array viewer, JSON object viewer, JSON to table, JSON to tree, format JSON online, view JSON online, parse JSON online, explore JSON online, beautify JSON online, prettify JSON online, malformed JSON fixer, auto fix JSON, fix broken JSON, JSON trailing comma fixer, JSON error fixer, JSON debug tool, developer tools, web developer JSON tool, online developer tool, JSON without install, browser JSON tool, JSON inspector, JSON analyzer, JSON diff, JSON compare">
   <meta name="author" content="Ankit Mishra">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#1e1e2e">
   <link rel="canonical" href="https://jsonviewer.iamankit.in/">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://jsonviewer.iamankit.in/">
-  <meta property="og:title" content="JSON Visualizer — Explore & Format JSON Online">
-  <meta property="og:description" content="Paste any JSON or GraphQL payload and instantly explore it as a table or tree. Auto-corrects malformed JSON. No install, no dependencies.">
-  <meta property="og:site_name" content="JSON Visualizer">
+  <meta property="og:title" content="JSON Viewer — Free Online JSON Viewer, Formatter & Explorer">
+  <meta property="og:description" content="Paste any JSON, API response, or GraphQL payload and instantly explore it as a formatted view, table, or tree. Auto-fixes malformed JSON. No install, no dependencies.">
+  <meta property="og:site_name" content="JSON Viewer">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary">
   <meta name="twitter:url" content="https://jsonviewer.iamankit.in/">
-  <meta name="twitter:title" content="JSON Visualizer — Explore & Format JSON Online">
-  <meta name="twitter:description" content="Paste any JSON or GraphQL payload and instantly explore it as a table or tree. Auto-corrects malformed JSON. No install, no dependencies.">
+  <meta name="twitter:title" content="JSON Viewer — Free Online JSON Viewer, Formatter & Explorer">
+  <meta name="twitter:description" content="Paste any JSON, API response, or GraphQL payload and instantly explore it as a formatted view, table, or tree. Auto-fixes malformed JSON. No install, no dependencies.">
   <meta name="twitter:creator" content="@iamankit">
 
   <!-- Structured Data -->
@@ -29,11 +31,13 @@
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    "name": "JSON Visualizer",
+    "name": "JSON Viewer",
     "url": "https://jsonviewer.iamankit.in/",
-    "description": "Free online JSON visualizer. Explore JSON and GraphQL payloads as table or tree views. Auto-corrects malformed JSON.",
+    "description": "Free online JSON visualizer. Paste any JSON, API response, or GraphQL payload and explore it as a formatted view, interactive table, or tree. Auto-fixes malformed JSON, supports nested drill-down, filtering, and syntax highlighting.",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript. Works in any modern browser.",
+    "featureList": "JSON formatting, JSON tree view, JSON table view, nested drill-down, breadcrumb navigation, syntax highlighting, malformed JSON auto-fix, filter and search, GraphQL support",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
     "author": { "@type": "Person", "name": "Ankit Mishra", "url": "https://iamankit.in" }
   }
@@ -44,22 +48,26 @@
 <body>
 
   <header class="app-header">
-    <div class="app-title">JSON Visualizer</div>
+    <div class="app-title">JSON Viewer</div>
     <button class="btn" id="aboutBtn">About</button>
   </header>
 
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
       <button class="modal-close" id="modalClose">&times;</button>
-      <h2>JSON Visualizer</h2>
-      <p>A lightweight, browser-based tool to explore and visualize JSON data in a structured table format — no dependencies, no build step.</p>
+      <h2>JSON Viewer</h2>
+      <p>A free, browser-based tool to explore, format, and debug JSON — no install, no dependencies, no data leaves your browser.</p>
       <ul>
-        <li>Paste any JSON and see the table render instantly as you type</li>
-        <li>Drill down into nested objects and arrays with a single click</li>
-        <li>Breadcrumb navigation to trace and jump back through nested paths</li>
-        <li>Syntax-colored values — strings, numbers, booleans, and nulls</li>
-        <li>Inline preview of nested objects without leaving the current view</li>
+        <li>🎨 <strong>Formatted view</strong> — syntax-highlighted, pretty-printed JSON</li>
+        <li>📊 <strong>Table view</strong> — explore arrays as rows with column headers</li>
+        <li>🌲 <strong>Tree view</strong> — collapsible node-by-node structure</li>
+        <li>🔍 <strong>Drill down</strong> — click into nested objects and arrays</li>
+        <li>🧭 <strong>Breadcrumb path</strong> — trace and jump back through nested levels</li>
+        <li>🔎 <strong>Filter &amp; search</strong> — filter table rows by key, value, or condition</li>
+        <li>🛠 <strong>Auto-fix</strong> — repairs trailing commas, unquoted keys, and Python-style values</li>
+        <li>📋 <strong>Copy</strong> — copy formatted JSON to clipboard instantly</li>
       </ul>
+      <p style="margin-top:14px;font-size:11px;color:#555;">Built by Ankit Mishra</p>
     </div>
   </div>
 
@@ -82,7 +90,7 @@
         </div>
       </div>
 
-      <div class="filter-bar" id="filterBar">
+      <div class="filter-bar" id="filterBar" style="display:none;">
         <span class="filter-label">Filter</span>
         <select id="filterKey"><option value="">— key —</option></select>
         <select id="filterOp">

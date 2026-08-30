@@ -51,8 +51,8 @@ body {
 }
 
 .editor-pane {
-  background-color: var(--bg-side);
-  border-right: 1px solid var(--border-color);
+  background-color: #1a1a2e;
+  border-right: 2px solid var(--accent-color);
   display: flex;
   flex-direction: column;
 }
@@ -62,11 +62,13 @@ body {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border-color);
+  color: #7eb8e8;
+  background-color: rgba(14, 99, 156, 0.2);
+  border-bottom: 1px solid var(--accent-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  letter-spacing: 0.5px;
 }
 
 .btn-copy {
@@ -83,15 +85,21 @@ body {
 
 textarea {
   flex: 1;
-  background: transparent;
+  background: #12121f;
   border: none;
-  color: var(--text-main);
+  color: #d4e6f7;
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 12px;
   padding: 12px;
   resize: none;
   outline: none;
-  line-height: 1.5;
+  line-height: 1.6;
+  caret-color: var(--accent-color);
+}
+
+textarea:focus {
+  background: #0f0f1c;
+  box-shadow: inset 2px 0 0 var(--accent-color);
 }
 
 .btn {
