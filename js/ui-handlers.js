@@ -60,15 +60,36 @@ class UIHandlers {
       clearBtn.onclick = () => {
         jsonInput.value = '';
         this.state.rootData = null;
+        this.state.pathStack = [{ label: '$', data: null }];
+        this.state.view = 'formatted';
         errorBanner.style.display = 'none';
-        document.getElementById('formattedContainer').style.display = 'block';
-        document.getElementById('tableContainer').style.display = 'none';
-        document.getElementById('treeContainer').style.display = 'none';
-        document.getElementById('filterBar').style.display = 'none';
-        document.getElementById('formattedContainer').innerHTML = '<pre id="formattedPre"></pre>';
-        if (this.state.view === 'formatted') {
-          document.getElementById('formattedPre').innerHTML = '';
+
+        const formattedContainer = document.getElementById('formattedContainer');
+        const tableContainer = document.getElementById('tableContainer');
+        const treeContainer = document.getElementById('treeContainer');
+        const breadcrumbBar = document.getElementById('breadcrumbBar');
+        const filterBar = document.getElementById('filterBar');
+        const tableHead = document.getElementById('tableHead');
+        const tableBody = document.getElementById('tableBody');
+        const formattedPre = formattedContainer ? formattedContainer.querySelector('#formattedPre') : null;
+
+        if (formattedContainer) formattedContainer.style.display = 'block';
+        if (tableContainer) tableContainer.style.display = 'none';
+        if (treeContainer) treeContainer.style.display = 'none';
+        if (treeContainer) treeContainer.innerHTML = '';
+        if (filterBar) filterBar.style.display = 'none';
+        if (tableHead) tableHead.innerHTML = '';
+        if (tableBody) tableBody.innerHTML = '';
+        if (breadcrumbBar) {
+          breadcrumbBar.style.visibility = 'hidden';
+          breadcrumbBar.innerHTML = 'Path: <span class="crumb-link">$</span>';
         }
+        if (formattedPre) formattedPre.innerHTML = '';
+
+        ['btnFormatted', 'btnTable', 'btnTree'].forEach(id => {
+          const btn = document.getElementById(id);
+          if (btn) btn.classList.toggle('active', id === 'btnFormatted');
+        });
       };
     }
 
@@ -214,6 +235,42 @@ class UIHandlers {
   onInputChange() {
     const jsonInput = document.getElementById('jsonInput');
     const errorBanner = document.getElementById('errorBanner');
+
+    if (!jsonInput || !jsonInput.value.trim()) {
+      this.state.rootData = null;
+      this.state.pathStack = [{ label: '$', data: null }];
+      this.state.view = 'formatted';
+
+      const formattedContainer = document.getElementById('formattedContainer');
+      const tableContainer = document.getElementById('tableContainer');
+      const treeContainer = document.getElementById('treeContainer');
+      const breadcrumbBar = document.getElementById('breadcrumbBar');
+      const filterBar = document.getElementById('filterBar');
+      const tableHead = document.getElementById('tableHead');
+      const tableBody = document.getElementById('tableBody');
+      const formattedPre = formattedContainer ? formattedContainer.querySelector('#formattedPre') : null;
+
+      if (formattedContainer) formattedContainer.style.display = 'block';
+      if (tableContainer) tableContainer.style.display = 'none';
+      if (treeContainer) treeContainer.style.display = 'none';
+      if (treeContainer) treeContainer.innerHTML = '';
+      if (filterBar) filterBar.style.display = 'none';
+      if (tableHead) tableHead.innerHTML = '';
+      if (tableBody) tableBody.innerHTML = '';
+      if (breadcrumbBar) {
+        breadcrumbBar.style.visibility = 'hidden';
+        breadcrumbBar.innerHTML = 'Path: <span class="crumb-link">$</span>';
+      }
+      if (formattedPre) formattedPre.innerHTML = '';
+      if (errorBanner) errorBanner.style.display = 'none';
+
+      ['btnFormatted', 'btnTable', 'btnTree'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.classList.toggle('active', id === 'btnFormatted');
+      });
+      return;
+    }
+
     const result = this.parser.parse(jsonInput.value);
 
     if (!result || result.error) {
@@ -264,6 +321,14 @@ class UIHandlers {
 
     this.renderBreadcrumbs();
 
+    const current = this.state.pathStack[this.state.pathStack.length - 1];
+    const targetData = current?.data;
+    const filterBar = document.getElementById('filterBar');
+
+    if (this.state.view === 'table' && filterBar) {
+      filterBar.style.display = Array.isArray(targetData) && targetData.length > 1 ? 'flex' : 'none';
+    }
+
     // Show/hide containers based on current view
     const formattedContainer = document.getElementById('formattedContainer');
     const tableContainer = document.getElementById('tableContainer');
@@ -293,8 +358,6 @@ class UIHandlers {
     if (tableContainer) tableContainer.style.display = '';
     if (treeContainer) treeContainer.style.display = 'none';
 
-    const current = this.state.pathStack[this.state.pathStack.length - 1];
-    const targetData = current.data;
     const result = this.renderers.renderTableView(targetData, this.state.pathStack);
     const { rows, headers } = result;
 
@@ -485,18 +548,21 @@ class UIHandlers {
   }
 
   buildPathText(suffix = '') {
-    const labels = this.state.pathStack.slice(1).map(item => item.label);
-    if (suffix) labels.push(suffix);
-
     let path = '$';
-    labels.forEach(label => {
-      const normalized = String(label || '').replace(/^\./, '').replace(/^\$/, '').trim();
+
+    this.state.pathStack.slice(1).forEach(item => {
+      const normalized = String(item.label || '').replace(/^\./, '').replace(/^\$/, '').trim();
       if (normalized) {
         path += `.${normalized}`;
       }
     });
 
-    return path.replace(/\.\[/g, '.[');
+    if (suffix) {
+      const suffixText = String(suffix).trim();
+      path += suffixText.startsWith('.') ? suffixText : `.${suffixText}`;
+    }
+
+    return path;
   }
 
   makeCrumbCopyBtn(text) {
