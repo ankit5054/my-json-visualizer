@@ -6,8 +6,20 @@ class Renderers {
   }
 
   renderFormattedView(data, options = {}, elementId = 'formattedPre') {
-    const pre = document.getElementById(elementId);
-    if (!data || !pre) return;
+    if (!data) return;
+    
+    let pre = document.getElementById(elementId);
+    
+    // Create pre element if it doesn't exist
+    if (!pre) {
+      const container = document.getElementById('formattedContainer');
+      if (!container) return;
+      pre = document.createElement('pre');
+      pre.id = elementId;
+      container.innerHTML = '';
+      container.appendChild(pre);
+    }
+    
     const formatted = this.utils.formatJsonOutput(data, options);
     pre.innerHTML = this.utils.syntaxHighlight(formatted);
   }
