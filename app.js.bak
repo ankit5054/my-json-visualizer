@@ -46,28 +46,22 @@ class JsonVisualizer {
     document.getElementById('clearInputBtn').onclick = () => {
       this.jsonInput.value = '';
       this.rootData = null;
-      this.pathStack = [];
-      this.view = 'formatted';
       this.errorBanner.style.display = 'none';
-
       this.formattedContainer.style.display = 'block';
       this.tableContainer.style.display = 'none';
       this.treeContainer.style.display = 'none';
       this.filterBar.style.display = 'none';
-      this.thead.innerHTML = '';
-      this.tbody.innerHTML = '';
-      this.treeContainer.innerHTML = '';
-      this.breadcrumbBar.innerHTML = 'Path:';
-      this.breadcrumbBar.style.visibility = 'hidden';
-
-      const pre = this.formattedContainer.querySelector('#formattedPre');
-      if (pre) pre.innerHTML = '';
-
-      ['btnFormatted', 'btnTable', 'btnTree'].forEach(id => {
-        const btn = document.getElementById(id);
-        if (btn) btn.classList.toggle('active', id === 'btnFormatted');
-      });
+      this.formattedContainer.innerHTML = '<pre id="formattedPre"></pre>';
+      this.formattedContainer.appendChild(document.getElementById('formattedPre'));
+      if (this.view === 'formatted') {
+        document.getElementById('formattedPre').innerHTML = '';
+      }
     };
+
+    document.getElementById('errorBannerClose').onclick = () => {
+      this.errorBanner.style.display = 'none';
+    };
+
     this.filterKey.addEventListener('change', () => {
       this.refreshFilterChildOptions();
       this.refreshFilterValueOptions();
@@ -132,6 +126,7 @@ class JsonVisualizer {
     this.tableContainer.style.display = 'none';
     this.treeContainer.style.display = 'none';
     document.getElementById('breadcrumbBar').style.visibility = 'hidden';
+    this.errorBanner.style.display = 'none';
 
     this.processJSON();
   }
@@ -363,7 +358,7 @@ class JsonVisualizer {
         parsed = JSON.parse(corrected);
         fixed = true;
       } catch (err) {
-        this.errorBanner.textContent = `JSON Error: ${err.message}`;
+        document.getElementById('errorText').textContent = `JSON Error: ${err.message}`;
         this.errorBanner.style.display = 'block';
         return;
       }
@@ -373,7 +368,7 @@ class JsonVisualizer {
     if (fixed) {
       this.errorBanner.style.background = '#1a3a1a';
       this.errorBanner.style.color = '#7ec87e';
-      this.errorBanner.textContent = '⚠ Auto-corrected JSON — trailing commas, quotes, or casing fixed';
+      document.getElementById('errorText').textContent = '⚠ Auto-corrected JSON — trailing commas, quotes, or casing fixed';
     } else {
       this.errorBanner.style.background = '';
       this.errorBanner.style.color = '';
