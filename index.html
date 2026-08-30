@@ -74,7 +74,8 @@
   <div class="workspace">
     <div class="editor-pane">
       <div class="pane-header">
-        Raw JSON Input
+        <span>Raw JSON Input</span>
+        <button class="pane-clear-btn" id="clearInputBtn" title="Clear input" aria-label="Clear JSON input">Clear</button>
       </div>
       <div class="error-banner" id="errorBanner">Invalid JSON</div>
       <textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
@@ -93,20 +94,25 @@
       <div class="filter-bar" id="filterBar" style="display:none;">
         <span class="filter-label">Filter</span>
         <select id="filterKey"><option value="">— key —</option></select>
-        <select id="filterOp">
+        <select id="filterChildKey" style="display:none;"><option value="">— child field —</option></select>
+        <select id="filterOp" style="display:none;">
           <option value="contains">contains</option>
           <option value="equals">equals</option>
           <option value="starts">starts with</option>
           <option value="gt">&gt;</option>
           <option value="lt">&lt;</option>
         </select>
-        <input id="filterVal" type="text" placeholder="value..." />
+        <select id="filterVal"><option value="">— value —</option></select>
         <button class="btn" id="filterClear">&#x2715;</button>
       </div>
 
       <div class="formatted-container" id="formattedContainer">
         <div class="formatted-toolbar">
           <button class="btn btn-copy" id="copyBtn">Copy</button>
+          <div class="formatted-toolbar-right">
+            <label class="fmt-option"><input type="checkbox" id="unquoteKeysChk"> Remove quotes from keys</label>
+            <label class="fmt-option"><input type="checkbox" id="minifyChk"> Minify</label>
+          </div>
         </div>
         <pre id="formattedPre"></pre>
       </div>

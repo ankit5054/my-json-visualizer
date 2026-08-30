@@ -6,6 +6,7 @@ class JsonVisualizer {
     this.thead = document.getElementById('tableHead');
     this.tbody = document.getElementById('tableBody');
     this.filterKey = document.getElementById('filterKey');
+    this.filterChildKey = document.getElementById('filterChildKey');
     this.filterOp = document.getElementById('filterOp');
     this.filterVal = document.getElementById('filterVal');
     this.filterBar = document.getElementById('filterBar');
@@ -13,6 +14,8 @@ class JsonVisualizer {
     this.treeContainer = document.getElementById('treeContainer');
     this.formattedContainer = document.getElementById('formattedContainer');
     this.view = 'formatted'; // 'table' | 'tree'
+    this.unquoteKeys = false;
+    this.minify = false;
 
     this.rootData = null;
     this.pathStack = [];
@@ -40,12 +43,41 @@ class JsonVisualizer {
     }, null, 2);
 
     this.jsonInput.addEventListener('input', () => this.processJSON());
-    this.filterKey.addEventListener('change', () => this.applyFilter());
+    document.getElementById('clearInputBtn').onclick = () => {
+      this.jsonInput.value = '';
+      this.rootData = null;
+      this.errorBanner.style.display = 'none';
+      this.formattedContainer.style.display = 'block';
+      this.tableContainer.style.display = 'none';
+      this.treeContainer.style.display = 'none';
+      this.filterBar.style.display = 'none';
+      this.formattedContainer.innerHTML = '<pre id="formattedPre"></pre>';
+      this.formattedContainer.appendChild(document.getElementById('formattedPre'));
+      if (this.view === 'formatted') {
+        document.getElementById('formattedPre').innerHTML = '';
+      }
+    };
+    this.filterKey.addEventListener('change', () => {
+      this.refreshFilterChildOptions();
+      this.refreshFilterValueOptions();
+      this.refreshFilterOperator();
+      this.applyFilter();
+    });
+    this.filterChildKey.addEventListener('change', () => {
+      this.refreshFilterValueOptions();
+      this.refreshFilterOperator();
+      this.applyFilter();
+    });
     this.filterOp.addEventListener('change', () => this.applyFilter());
-    this.filterVal.addEventListener('input', () => this.applyFilter());
+    this.filterVal.addEventListener('change', () => this.applyFilter());
     document.getElementById('filterClear').onclick = () => {
       this.filterKey.value = '';
+      this.filterChildKey.value = '';
+      this.filterChildKey.style.display = 'none';
+      this.filterVal.innerHTML = '<option value="">— value —</option>';
       this.filterVal.value = '';
+      this.filterOp.style.display = 'none';
+      this.filterOp.value = 'contains';
       this.applyFilter();
     };
 
@@ -53,10 +85,16 @@ class JsonVisualizer {
     document.getElementById('aboutBtn').onclick = () => overlay.classList.add('open');
     document.getElementById('modalClose').onclick = () => overlay.classList.remove('open');
     overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove('open'); };
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay.classList.contains('open')) {
+        overlay.classList.remove('open');
+      }
+    });
 
     document.getElementById('copyBtn').onclick = () => {
       if (!this.rootData) return;
-      const formatted = JSON.stringify(this.rootData, null, 2);
+      const formatted = this.formatJsonOutput();
       navigator.clipboard.writeText(formatted).then(() => {
         const btn = document.getElementById('copyBtn');
         btn.textContent = 'Copied!';
@@ -69,9 +107,20 @@ class JsonVisualizer {
     document.getElementById('btnTable').onclick = () => this.setView('table');
     document.getElementById('btnTree').onclick = () => this.setView('tree');
 
+    document.getElementById('unquoteKeysChk').onchange = (e) => {
+      this.unquoteKeys = e.target.checked;
+      if (this.view === 'formatted') this.renderFormattedView();
+    };
+
+    document.getElementById('minifyChk').onchange = (e) => {
+      this.minify = e.target.checked;
+      if (this.view === 'formatted') this.renderFormattedView();
+    };
+
     this.formattedContainer.style.display = 'block';
     this.tableContainer.style.display = 'none';
     this.treeContainer.style.display = 'none';
+    document.getElementById('breadcrumbBar').style.visibility = 'hidden';
 
     this.processJSON();
   }
@@ -84,6 +133,7 @@ class JsonVisualizer {
     this.formattedContainer.style.display = view === 'formatted' ? 'block' : 'none';
     this.tableContainer.style.display = view === 'table' ? '' : 'none';
     this.treeContainer.style.display = view === 'tree' ? 'block' : 'none';
+    document.getElementById('breadcrumbBar').style.visibility = view === 'table' ? 'visible' : 'hidden';
     const currentData = this.pathStack[this.pathStack.length - 1]?.data;
     this.filterBar.style.display = view === 'table' && Array.isArray(currentData) && currentData.length > 1 ? 'flex' : 'none';
     if (view === 'tree') this.renderTreeView();
@@ -319,14 +369,22 @@ class JsonVisualizer {
     }
 
     this.rootData = parsed;
-    this.pathStack = [{ label: 'root', data: this.rootData }];
+    this.pathStack = [{ label: '$', data: this.rootData }];
     this.renderCurrentLevel();
+  }
+
+  formatJsonOutput() {
+    let json = this.minify ? JSON.stringify(this.rootData) : JSON.stringify(this.rootData, null, 2);
+    if (this.unquoteKeys) {
+      json = json.replace(/"([a-zA-Z_$][\w$]*)"\s*:/g, '$1:');
+    }
+    return json;
   }
 
   renderFormattedView() {
     if (!this.rootData) return;
     const pre = document.getElementById('formattedPre');
-    pre.innerHTML = this.syntaxHighlight(JSON.stringify(this.rootData, null, 2));
+    pre.innerHTML = this.syntaxHighlight(this.formatJsonOutput());
   }
 
   syntaxHighlight(json) {
@@ -368,11 +426,21 @@ class JsonVisualizer {
     }
 
     const headers = Array.from(new Set(rows.flatMap(r => (typeof r === 'object' && r !== null) ? Object.keys(r) : ['value'])));
+    const filterableHeaders = headers.filter(header => {
+      return rows.some(row => {
+        const value = (typeof row === 'object' && row !== null) ? row[header] : row;
+        return value !== undefined;
+      });
+    });
 
     // Populate filter key dropdown from current headers
     const prevKey = this.filterKey.value;
+    const selectedKey = filterableHeaders.includes(prevKey) ? prevKey : '';
     this.filterKey.innerHTML = '<option value="">— key —</option>' +
-      headers.map(h => `<option value="${h}" ${h === prevKey ? 'selected' : ''}>${h}</option>`).join('');
+      filterableHeaders.map(h => `<option value="${h}" ${h === selectedKey ? 'selected' : ''}>${h}</option>`).join('');
+    this.filterKey.value = selectedKey;
+    this.refreshFilterChildOptions();
+    this.refreshFilterValueOptions();
     this.filterBar.style.display = this.view === 'table' && Array.isArray(targetData) && rows.length > 1 ? 'flex' : 'none';
 
     this.thead.innerHTML = `<tr><th>#</th>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
@@ -380,7 +448,7 @@ class JsonVisualizer {
     this.tbody.innerHTML = '';
     rows.forEach((row, rIdx) => {
       const tr = document.createElement('tr');
-      let rowHtml = `<td>${rIdx + 1}</td>`;
+      let rowHtml = `<td>${rIdx}</td>`;
 
       headers.forEach(header => {
         const val = (typeof row === 'object' && row !== null) ? row[header] : row;
@@ -396,6 +464,20 @@ class JsonVisualizer {
 
     this.tbody.onclick = (e) => {
       const btn = e.target.closest('[data-key]');
+      const td = e.target.closest('td');
+      const tr = e.target.closest('tr');
+
+      if (td && tr) {
+        const cellIndex = Array.from(tr.cells).indexOf(td);
+        if (cellIndex > 0) {
+          const header = headers[cellIndex - 1];
+          const rowIndex = parseInt(tr.dataset.rowIndex, 10);
+          const isParentArray = Array.isArray(targetData);
+          const suffix = isParentArray ? `.[${rowIndex}].${header}` : `.${header}`;
+          this.renderBreadcrumbs(suffix);
+        }
+      }
+
       if (!btn) return;
 
       const key = btn.getAttribute('data-key');
@@ -418,10 +500,165 @@ class JsonVisualizer {
     };
   }
 
+  refreshFilterChildOptions() {
+    const key = this.filterKey.value;
+    const current = this.pathStack[this.pathStack.length - 1];
+    const targetData = current.data;
+    const rows = Array.isArray(targetData) ? targetData : [targetData];
+
+    const childKeys = new Set();
+    rows.forEach(row => {
+      const value = (typeof row === 'object' && row !== null) ? row[key] : row;
+      if (value && typeof value === 'object') {
+        const nestedEntries = Array.isArray(value)
+          ? value.filter(item => item && typeof item === 'object' && !Array.isArray(item))
+          : [value];
+
+        nestedEntries.forEach(entry => {
+          Object.keys(entry).forEach(childKey => {
+            const childValue = entry[childKey];
+            if (childValue === null || childValue === undefined || ['string', 'number', 'boolean'].includes(typeof childValue)) {
+              childKeys.add(childKey);
+            }
+          });
+        });
+      }
+    });
+
+    if (!key || childKeys.size === 0) {
+      this.filterChildKey.innerHTML = '<option value="">— child field —</option>';
+      this.filterChildKey.style.display = 'none';
+      this.filterChildKey.value = '';
+      return;
+    }
+
+    const options = ['<option value="">— child field —</option>']
+      .concat(Array.from(childKeys).map(childKey => `<option value="${childKey}">${childKey}</option>`))
+      .join('');
+    this.filterChildKey.innerHTML = options;
+    this.filterChildKey.style.display = 'inline-block';
+  }
+
+  refreshFilterOperator() {
+    const key = this.filterKey.value;
+    const childKey = this.filterChildKey.style.display !== 'none' ? this.filterChildKey.value : '';
+    const current = this.pathStack[this.pathStack.length - 1];
+    const targetData = current.data;
+    const rows = Array.isArray(targetData) ? targetData : [targetData];
+
+    if (!key) {
+      this.filterOp.style.display = 'none';
+      this.filterOp.value = 'contains';
+      return;
+    }
+
+    let allStringLike = true;
+    rows.forEach(row => {
+      const value = this.resolveFilterValue(row, key, childKey);
+      if (value === null || value === undefined) return;
+      if (typeof value !== 'string') {
+        allStringLike = false;
+      }
+    });
+
+    if (allStringLike) {
+      this.filterOp.style.display = 'none';
+      this.filterOp.value = 'equals';
+      return;
+    }
+
+    this.filterOp.style.display = 'inline-block';
+    if (!['gt', 'lt'].includes(this.filterOp.value)) {
+      this.filterOp.value = 'equals';
+    }
+  }
+
+  refreshFilterValueOptions() {
+    const key = this.filterKey.value;
+    const childKey = this.filterChildKey.style.display !== 'none' ? this.filterChildKey.value : '';
+    const current = this.pathStack[this.pathStack.length - 1];
+    const targetData = current.data;
+    const rows = Array.isArray(targetData) ? targetData : [targetData];
+
+    if (!key) {
+      this.filterVal.innerHTML = '<option value="">— value —</option>';
+      return;
+    }
+
+    const firstRowValue = rows.find(row => {
+      const value = (typeof row === 'object' && row !== null) ? row[key] : row;
+      return value !== undefined;
+    });
+    const parentValue = firstRowValue && typeof firstRowValue === 'object' ? firstRowValue[key] : undefined;
+    const hasNullInParent = rows.some(row => {
+      const value = (typeof row === 'object' && row !== null) ? row[key] : row;
+      return value === null || value === undefined;
+    });
+
+    if (!childKey && parentValue !== null && parentValue !== undefined && typeof parentValue === 'object') {
+      if (hasNullInParent) {
+        this.filterVal.innerHTML = '<option value="">— value —</option><option value="null">null</option>';
+        this.filterVal.value = '';
+        return;
+      }
+      this.filterVal.innerHTML = '<option value="">— value —</option>';
+      this.filterVal.value = '';
+      return;
+    }
+
+    const values = new Set();
+    let hasNull = false;
+    rows.forEach(row => {
+      const value = this.resolveFilterValue(row, key, childKey);
+      if (value === null || value === undefined) {
+        hasNull = true;
+        return;
+      }
+      if (typeof value !== 'object') {
+        const text = String(value);
+        if (text !== '') values.add(text);
+      }
+    });
+
+    const sortedValues = Array.from(values).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    const options = ['<option value="">— value —</option>'];
+    if (hasNull) {
+      options.push('<option value="null">null</option>');
+    }
+    options.push(...sortedValues.map(value => `<option value="${this.escapeHtml(value)}">${this.escapeHtml(value)}</option>`));
+
+    this.filterVal.innerHTML = options.join('');
+    this.filterVal.value = '';
+  }
+
+  resolveFilterValue(row, key, childKey) {
+    const rawValue = (typeof row === 'object' && row !== null) ? row[key] : row;
+    if (!childKey || rawValue === null || rawValue === undefined) {
+      if (rawValue === null || rawValue === undefined) return rawValue;
+      return typeof rawValue === 'object' ? JSON.stringify(rawValue) : String(rawValue);
+    }
+
+    if (Array.isArray(rawValue)) {
+      const values = rawValue
+        .filter(item => item && typeof item === 'object')
+        .map(item => item[childKey]);
+      return values.length ? values.map(v => v === null || v === undefined ? null : String(v)).join(', ') : '';
+    }
+
+    if (rawValue && typeof rawValue === 'object') {
+      const nestedValue = rawValue[childKey];
+      return nestedValue === undefined ? '' : (nestedValue === null ? null : String(nestedValue));
+    }
+
+    return '';
+  }
+
   applyFilter() {
     const key = this.filterKey.value;
+    const childKey = this.filterChildKey.style.display !== 'none' ? this.filterChildKey.value : '';
     const op = this.filterOp.value;
-    const search = this.filterVal.value.trim().toLowerCase();
+    const selectedValue = this.filterVal.value;
+    const search = selectedValue.trim();
 
     const current = this.pathStack[this.pathStack.length - 1];
     const targetData = current.data;
@@ -436,17 +673,26 @@ class JsonVisualizer {
         return;
       }
 
-      const rawVal = (typeof row === 'object' && row !== null) ? row[key] : row;
-      const cellStr = String(rawVal ?? '').toLowerCase();
-      const numVal = parseFloat(rawVal);
-      const numSearch = parseFloat(search);
+      const rawVal = this.resolveFilterValue(row, key, childKey);
+      const normalizedVal = rawVal === null || rawVal === undefined ? '' : String(rawVal);
+      const cellStr = normalizedVal.toLowerCase();
+      const numVal = typeof rawVal === 'number' ? rawVal : parseFloat(rawVal);
+      const numSearch = parseFloat(selectedValue);
 
       let match = false;
-      if (op === 'contains') match = cellStr.includes(search);
-      else if (op === 'equals') match = cellStr === search;
-      else if (op === 'starts') match = cellStr.startsWith(search);
-      else if (op === 'gt') match = !isNaN(numVal) && !isNaN(numSearch) && numVal > numSearch;
-      else if (op === 'lt') match = !isNaN(numVal) && !isNaN(numSearch) && numVal < numSearch;
+      if (selectedValue === 'null') {
+        match = rawVal === null || rawVal === undefined || normalizedVal === '';
+      } else if (op === 'equals') {
+        match = cellStr === selectedValue.toLowerCase();
+      } else if (op === 'contains') {
+        match = cellStr.includes(selectedValue.toLowerCase());
+      } else if (op === 'starts') {
+        match = cellStr.startsWith(selectedValue.toLowerCase());
+      } else if (op === 'gt') {
+        match = !isNaN(numVal) && !isNaN(numSearch) && numVal > numSearch;
+      } else if (op === 'lt') {
+        match = !isNaN(numVal) && !isNaN(numSearch) && numVal < numSearch;
+      }
 
       tr.classList.toggle('row-hidden', !match);
     });
@@ -491,29 +737,55 @@ class JsonVisualizer {
     return String(val);
   }
 
-  renderBreadcrumbs() {
+  _makeCrumbCopyBtn(text) {
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'crumb-copy-btn';
+    copyBtn.title = 'Copy path';
+    const icon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+    const check = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7ec87e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
+    copyBtn.innerHTML = icon;
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.innerHTML = check;
+        setTimeout(() => { copyBtn.innerHTML = icon; }, 1500);
+      });
+    };
+    return copyBtn;
+  }
+
+  renderBreadcrumbs(suffix = '') {
     const bar = document.getElementById('breadcrumbBar');
-    bar.innerHTML = 'Path: ';
+    const fullPath = this.pathStack.map(p => p.label).join('.') + suffix;
+
+    bar.innerHTML = '';
 
     this.pathStack.forEach((item, index) => {
-      const link = document.createElement('span');
-      link.className = 'crumb-link';
-      link.textContent = item.label;
-
-      link.onclick = () => {
-        this.pathStack = this.pathStack.slice(0, index + 1);
-        this.renderCurrentLevel();
-      };
-
-      bar.appendChild(link);
-
-      if (index < this.pathStack.length - 1) {
-        const sep = document.createElement('span');
-        sep.className = 'crumb-separator';
-        sep.textContent = ' / ';
-        bar.appendChild(sep);
+      if (index > 0) {
+        const dot = document.createElement('span');
+        dot.className = 'crumb-separator';
+        dot.textContent = '.';
+        bar.appendChild(dot);
       }
+      const link = document.createElement('span');
+      link.className = index === this.pathStack.length - 1 && !suffix ? 'crumb-current' : 'crumb-link';
+      link.textContent = item.label;
+      if (index < this.pathStack.length - 1) {
+        link.onclick = () => {
+          this.pathStack = this.pathStack.slice(0, index + 1);
+          this.renderCurrentLevel();
+        };
+      }
+      bar.appendChild(link);
     });
+
+    if (suffix) {
+      const suffixSpan = document.createElement('span');
+      suffixSpan.className = 'crumb-current';
+      suffixSpan.textContent = suffix;
+      bar.appendChild(suffixSpan);
+    }
+
+    bar.appendChild(this._makeCrumbCopyBtn(fullPath));
   }
 
   escapeHtml(str) {
