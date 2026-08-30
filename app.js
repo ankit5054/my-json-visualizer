@@ -57,11 +57,6 @@ class JsonVisualizer {
         document.getElementById('formattedPre').innerHTML = '';
       }
     };
-
-    document.getElementById('errorBannerClose').onclick = () => {
-      this.errorBanner.style.display = 'none';
-    };
-
     this.filterKey.addEventListener('change', () => {
       this.refreshFilterChildOptions();
       this.refreshFilterValueOptions();
@@ -126,7 +121,6 @@ class JsonVisualizer {
     this.tableContainer.style.display = 'none';
     this.treeContainer.style.display = 'none';
     document.getElementById('breadcrumbBar').style.visibility = 'hidden';
-    this.errorBanner.style.display = 'none';
 
     this.processJSON();
   }
@@ -358,7 +352,7 @@ class JsonVisualizer {
         parsed = JSON.parse(corrected);
         fixed = true;
       } catch (err) {
-        document.getElementById('errorText').textContent = `JSON Error: ${err.message}`;
+        this.errorBanner.textContent = `JSON Error: ${err.message}`;
         this.errorBanner.style.display = 'block';
         return;
       }
@@ -368,7 +362,7 @@ class JsonVisualizer {
     if (fixed) {
       this.errorBanner.style.background = '#1a3a1a';
       this.errorBanner.style.color = '#7ec87e';
-      document.getElementById('errorText').textContent = '⚠ Auto-corrected JSON — trailing commas, quotes, or casing fixed';
+      this.errorBanner.textContent = '⚠ Auto-corrected JSON — trailing commas, quotes, or casing fixed';
     } else {
       this.errorBanner.style.background = '';
       this.errorBanner.style.color = '';

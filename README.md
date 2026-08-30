@@ -2,7 +2,7 @@
 
 A lightweight, browser-based tool to explore and visualize JSON data in a structured table format — no dependencies, no build step.
 
-🔗 **Live Demo:** [https://jsonviewer.iamankit.in/](https://jsonviewer.iamankit.in/)
+🔗 **Live Demo:** [https://ankit5054.github.io/my-json-visualizer](https://ankit5054.github.io/my-json-visualizer)
 
 ## Features
 
