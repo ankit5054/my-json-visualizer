@@ -55,19 +55,21 @@
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
       <button class="modal-close" id="modalClose">&times;</button>
-      <h2>JSON Viewer</h2>
-      <p>A free, browser-based tool to explore, format, and debug JSON — no install, no dependencies, no data leaves your browser.</p>
+      <h2>Free Online JSON Viewer, Formatter &amp; Explorer</h2>
+      <p>Visualize, format, and debug JSON instantly. No install, no data storage — everything runs locally in your browser.</p>
+      <h3>Key Features</h3>
       <ul>
-        <li>🎨 <strong>Formatted view</strong> — syntax-highlighted, pretty-printed JSON</li>
-        <li>📊 <strong>Table view</strong> — explore arrays as rows with column headers</li>
-        <li>🌲 <strong>Tree view</strong> — collapsible node-by-node structure</li>
-        <li>🔍 <strong>Drill down</strong> — click into nested objects and arrays</li>
-        <li>🧭 <strong>Breadcrumb path</strong> — trace and jump back through nested levels</li>
-        <li>🔎 <strong>Filter &amp; search</strong> — filter table rows by key, value, or condition</li>
-        <li>🛠 <strong>Auto-fix</strong> — repairs trailing commas, unquoted keys, and Python-style values</li>
-        <li>📋 <strong>Copy</strong> — copy formatted JSON to clipboard instantly</li>
+        <li>🎨 <strong>Formatted View</strong> — syntax-highlighted JSON with color-coded types</li>
+        <li>📊 <strong>Table View</strong> — explore arrays as filterable data tables</li>
+        <li>🌲 <strong>Tree View</strong> — collapsible structure explorer</li>
+        <li>🔍 <strong>Drill-Down</strong> — click into nested objects and arrays</li>
+        <li>🧭 <strong>Breadcrumb Navigation</strong> — jump through nested levels</li>
+        <li>🔎 <strong>Filter &amp; Search</strong> — filter rows by key, value, or condition</li>
+        <li>🛠 <strong>Auto-Fix</strong> — repairs malformed JSON automatically</li>
+        <li>📋 <strong>Copy to Clipboard</strong> — formatted, minified, or custom output</li>
       </ul>
-      <p style="margin-top:14px;font-size:11px;color:#555;">Built by Ankit Mishra</p>
+      <p style="font-size:11px;color:#888;margin-top:12px;">Built by Ankit Mishra • 100% free &amp; open-source • Privacy-first</p>
+      <p style="font-size:10px;color:#666;margin-top:8px;border-top:1px solid #3c3c3c;padding-top:8px;">&copy; 2026 Ankit Mishra. All rights reserved.</p>
     </div>
   </div>
 
@@ -77,7 +79,10 @@
         <span>Raw JSON Input</span>
         <button class="pane-clear-btn" id="clearInputBtn" title="Clear input" aria-label="Clear JSON input">Clear</button>
       </div>
-      <div class="error-banner" id="errorBanner">Invalid JSON</div>
+      <div class="error-banner" id="errorBanner">
+        <span id="errorText">Invalid JSON</span>
+        <button class="error-banner-close" id="errorBannerClose" title="Dismiss error" aria-label="Close error message">&times;</button>
+      </div>
       <textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
     </div>
 
@@ -128,6 +133,12 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- Modular Scripts -->
+  <script src="js/json-parser.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/filters.js"></script>
+  <script src="js/renderers.js"></script>
+  <script src="js/ui-handlers.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
