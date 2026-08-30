@@ -9,41 +9,12 @@ class UIHandlers {
   }
 
   init() {
-    this.setupViewContainers();
     this.setupInputHandlers();
     this.setupFilterHandlers();
     this.setupViewToggleHandlers();
     this.setupCopyHandler();
     this.setupModalHandlers();
     this.setupFormattingHandlers();
-  }
-
-  setupViewContainers() {
-    const formattedContainer = document.getElementById('formattedContainer');
-    const tableContainer = document.getElementById('tableContainer');
-    const treeContainer = document.getElementById('treeContainer');
-    const breadcrumbBar = document.getElementById('breadcrumbBar');
-    const filterBar = document.getElementById('filterBar');
-    const errorBanner = document.getElementById('errorBanner');
-
-    // Ensure formatted container has pre element
-    if (formattedContainer && !formattedContainer.querySelector('pre')) {
-      const pre = document.createElement('pre');
-      pre.id = 'formattedPre';
-      formattedContainer.appendChild(pre);
-    }
-
-    // Initialize visibility
-    if (formattedContainer) formattedContainer.style.display = 'block';
-    if (tableContainer) tableContainer.style.display = 'none';
-    if (treeContainer) treeContainer.style.display = 'none';
-    if (breadcrumbBar) breadcrumbBar.style.visibility = 'hidden';
-    if (filterBar) filterBar.style.display = 'none';
-    if (errorBanner) errorBanner.style.display = 'none';
-
-    // Set active button
-    const btnFormatted = document.getElementById('btnFormatted');
-    if (btnFormatted) btnFormatted.classList.add('active');
   }
 
   setupInputHandlers() {
@@ -216,13 +187,9 @@ class UIHandlers {
     const errorBanner = document.getElementById('errorBanner');
     const result = this.parser.parse(jsonInput.value);
 
-    if (!result || result.error) {
-      if (result?.error) {
-        document.getElementById('errorText').textContent = `JSON Error: ${result.error}`;
-        errorBanner.style.display = 'block';
-      } else {
-        errorBanner.style.display = 'none';
-      }
+    if (result.error) {
+      document.getElementById('errorText').textContent = `JSON Error: ${result.error}`;
+      errorBanner.style.display = 'block';
       return;
     }
 
@@ -264,15 +231,7 @@ class UIHandlers {
 
     this.renderBreadcrumbs();
 
-    // Show/hide containers based on current view
-    const formattedContainer = document.getElementById('formattedContainer');
-    const tableContainer = document.getElementById('tableContainer');
-    const treeContainer = document.getElementById('treeContainer');
-
     if (this.state.view === 'formatted') {
-      if (formattedContainer) formattedContainer.style.display = 'block';
-      if (tableContainer) tableContainer.style.display = 'none';
-      if (treeContainer) treeContainer.style.display = 'none';
       this.renderers.renderFormattedView(this.state.rootData, {
         minify: this.state.minify,
         unquoteKeys: this.state.unquoteKeys
@@ -281,17 +240,9 @@ class UIHandlers {
     }
 
     if (this.state.view === 'tree') {
-      if (formattedContainer) formattedContainer.style.display = 'none';
-      if (tableContainer) tableContainer.style.display = 'none';
-      if (treeContainer) treeContainer.style.display = 'block';
       this.renderers.renderTreeView(this.state.rootData);
       return;
     }
-
-    // Table view
-    if (formattedContainer) formattedContainer.style.display = 'none';
-    if (tableContainer) tableContainer.style.display = '';
-    if (treeContainer) treeContainer.style.display = 'none';
 
     const current = this.state.pathStack[this.state.pathStack.length - 1];
     const targetData = current.data;
@@ -484,43 +435,6 @@ class UIHandlers {
     };
   }
 
-  buildPathText(suffix = '') {
-    const labels = this.state.pathStack.slice(1).map(item => item.label);
-    if (suffix) labels.push(suffix);
-
-    let path = '$';
-    labels.forEach(label => {
-      const normalized = String(label || '').replace(/^\./, '').replace(/^\$/, '').trim();
-      if (normalized) {
-        path += `.${normalized}`;
-      }
-    });
-
-    return path.replace(/\.\[/g, '.[');
-  }
-
-  makeCrumbCopyBtn(text) {
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'crumb-copy-btn';
-    copyBtn.title = 'Copy path';
-    copyBtn.type = 'button';
-
-    const icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-    const check = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7ec87e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
-
-    copyBtn.innerHTML = icon;
-    copyBtn.onclick = () => {
-      navigator.clipboard.writeText(text).then(() => {
-        copyBtn.innerHTML = check;
-        setTimeout(() => {
-          copyBtn.innerHTML = icon;
-        }, 1500);
-      });
-    };
-
-    return copyBtn;
-  }
-
   renderBreadcrumbs(suffix = '') {
     const breadcrumbBar = document.getElementById('breadcrumbBar');
     if (!breadcrumbBar) return;
@@ -536,7 +450,6 @@ class UIHandlers {
     }
 
     breadcrumbBar.innerHTML = html;
-    breadcrumbBar.appendChild(this.makeCrumbCopyBtn(this.buildPathText(suffix)));
 
     breadcrumbBar.querySelectorAll('.crumb-link').forEach(link => {
       link.onclick = (e) => {

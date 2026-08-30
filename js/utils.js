@@ -31,7 +31,7 @@ class Utils {
       );
   }
 
-  renderFormattedCell(val, header, rIdx, depth, parentKey = null) {
+  renderFormattedCell(val, header, rIdx, depth) {
     if (val === null || val === undefined) {
       return `<span class="val-null">null</span>`;
     }
@@ -48,35 +48,13 @@ class Utils {
       return `<span class="val-string">${this.escapeHtml(val)}</span>`;
     }
 
-    if (typeof val === 'object') {
-      // For objects at depth 0, show inline preview of first 4 keys
-      if (!Array.isArray(val) && depth === 0) {
-        const childKeys = Object.keys(val);
+    if (Array.isArray(val)) {
+      return `<button class="drill-btn" data-key="${header}" data-rowindex="${rIdx}" data-type="array">[${val.length} items]</button>`;
+    }
 
-        let inlineHtml = `<div class="inline-object-preview">`;
-        childKeys.slice(0, 4).forEach(cKey => {
-          const childVal = val[cKey];
-          const isComplex = typeof childVal === 'object' && childVal !== null;
-
-          inlineHtml += `
-            <div class="inline-row">
-              <span class="inline-key">${cKey}:</span>
-              <span>
-                ${isComplex
-                  ? `<button class="val-drilldown-btn" data-key="${header}" data-rowindex="${rIdx}" data-subkey="${cKey}">${Array.isArray(childVal) ? `Array[${childVal.length}]` : 'Object'} &rarr;</button>`
-                  : this.renderFormattedCell(childVal, header, rIdx, depth + 1, cKey)
-                }
-              </span>
-            </div>`;
-        });
-
-        inlineHtml += `</div>`;
-        return inlineHtml;
-      }
-
-      const label = Array.isArray(val) ? `Array[${val.length}]` : 'Object';
-      const attrSub = parentKey ? `data-subkey="${parentKey}"` : '';
-      return `<button class="val-drilldown-btn" data-key="${header}" data-rowindex="${rIdx}" ${attrSub}>${label} &rarr;</button>`;
+    if (typeof val === 'object' && val !== null) {
+      const keys = Object.keys(val);
+      return `<button class="drill-btn" data-key="${header}" data-rowindex="${rIdx}" data-type="object">{${keys.length} keys}</button>`;
     }
 
     return this.escapeHtml(String(val));

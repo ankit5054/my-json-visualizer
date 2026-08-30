@@ -120,7 +120,7 @@ class JsonParser {
 
   parse(jsonString) {
     const rawVal = jsonString.trim();
-    if (!rawVal) return { data: null };
+    if (!rawVal) return null;
 
     let parsed = null;
     let fixed = false;
