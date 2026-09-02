@@ -25,10 +25,15 @@ class JsonVisualizer {
 
     this.rootData = null;
     this.pathStack = [];
+    this.inputUpdateTimer = null;
+    this.dataVersion = 0;
 
     this.jsonInput.value = JSON.stringify(this.createSampleData(), null, 2);
 
-    this.jsonInput.addEventListener('input', () => this.processJSON());
+    this.jsonInput.addEventListener('input', () => {
+      clearTimeout(this.inputUpdateTimer);
+      this.inputUpdateTimer = setTimeout(() => this.processJSON(), 150);
+    });
     this.inputToggleBtn.onclick = () => {
       this.setInputPanelCollapsed(!this.workspace.classList.contains('input-collapsed'));
     };
@@ -287,7 +292,6 @@ class JsonVisualizer {
     if (view === 'formatted') this.renderFormattedView();
     if (view === 'table') {
       this.renderCurrentLevel();
-      this.renderFormattedView('tableFormattedPre');
     }
   }
 
@@ -527,6 +531,7 @@ class JsonVisualizer {
     }
 
     this.rootData = parsed;
+    this.dataVersion += 1;
     this.pathStack = [{ label: '$', data: this.rootData }];
     this.renderCurrentLevel();
   }
@@ -543,16 +548,20 @@ class JsonVisualizer {
     if (!this.rootData) return;
     const pre = document.getElementById(elementId);
     if (!pre) return;
+    const renderKey = `${this.dataVersion}:${this.unquoteKeys}:${this.minify}`;
+    if (pre.dataset.renderKey === renderKey && pre.childNodes.length > 0) return;
     const collapsedPaths = new Set(
       [...pre.querySelectorAll('.fmt-node.fmt-collapsed[data-fmt-path]')]
         .map(node => node.dataset.fmtPath)
     );
     if (this.minify) {
       pre.innerHTML = this.syntaxHighlight(this.formatJsonOutput());
+      pre.dataset.renderKey = renderKey;
       return;
     }
     pre.innerHTML = '';
     pre.appendChild(this.buildFoldableNode(this.rootData, null, true, [], collapsedPaths));
+    pre.dataset.renderKey = renderKey;
   }
 
   buildFoldableNode(val, key, isLast, path = [], collapsedPaths = new Set()) {
