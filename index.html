@@ -49,7 +49,9 @@
 
   <header class="app-header">
     <div class="app-title">JSON Viewer</div>
-    <button class="btn" id="aboutBtn">About</button>
+    <div class="header-actions">
+      <button class="btn" id="aboutBtn">About</button>
+    </div>
   </header>
 
   <div class="modal-overlay" id="modalOverlay">
@@ -80,6 +82,7 @@
       <div class="error-banner" id="errorBanner">Invalid JSON</div>
       <textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
     </div>
+    <button class="input-toggle-edge" id="inputToggleBtn" title="Hide raw JSON input" aria-label="Hide raw JSON input" aria-expanded="true">&#8249;</button>
 
     <div class="preview-pane">
       <div class="breadcrumb-bar">
@@ -96,19 +99,23 @@
         <select id="filterKey"><option value="">— key —</option></select>
         <select id="filterChildKey" style="display:none;"><option value="">— child field —</option></select>
         <select id="filterOp" style="display:none;">
-          <option value="contains">contains</option>
           <option value="equals">equals</option>
+          <option value="contains">contains</option>
           <option value="starts">starts with</option>
-          <option value="gt">&gt;</option>
-          <option value="lt">&lt;</option>
+          <option value="ends">ends with</option>
+          <option value="gt">greater than</option>
+          <option value="lt">less than</option>
         </select>
         <select id="filterVal"><option value="">— value —</option></select>
+        <input id="filterValInput" type="text" placeholder="type value…" style="display:none;">
         <button class="btn" id="filterClear">&#x2715;</button>
       </div>
 
       <div class="formatted-container" id="formattedContainer">
         <div class="formatted-toolbar">
           <button class="btn btn-copy" id="copyBtn">Copy</button>
+          <button class="btn btn-fold" id="fmtExpandAll">Expand All</button>
+          <button class="btn btn-fold" id="fmtCollapseAll">Collapse All</button>
           <div class="formatted-toolbar-right">
             <label class="fmt-option"><input type="checkbox" id="unquoteKeysChk"> Remove quotes from keys</label>
             <label class="fmt-option"><input type="checkbox" id="minifyChk"> Minify</label>
@@ -124,7 +131,25 @@
         </table>
       </div>
 
-      <div class="tree-container" id="treeContainer"></div>
+      <div class="table-formatted-container" id="tableFormattedContainer">
+        <div class="table-formatted-header">
+          <span>Formatted JSON</span>
+          <div class="table-formatted-actions">
+            <button class="btn btn-fold" id="tableFmtExpandAll">Expand All</button>
+            <button class="btn btn-fold" id="tableFmtCollapseAll">Collapse All</button>
+          </div>
+        </div>
+        <pre id="tableFormattedPre"></pre>
+      </div>
+      <button class="table-formatted-toggle" id="tableFormattedToggle" title="Hide formatted preview" aria-label="Hide formatted preview" aria-expanded="true">&#8250;</button>
+
+      <div class="tree-container" id="treeContainer">
+        <div class="tree-toolbar" id="treeToolbar" style="display:none;">
+          <button class="btn btn-fold" id="treeExpandAll">Expand All</button>
+          <button class="btn btn-fold" id="treeCollapseAll">Collapse All</button>
+        </div>
+        <div id="treeContent"></div>
+      </div>
     </div>
   </div>
 

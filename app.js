@@ -1,6 +1,9 @@
 class JsonVisualizer {
   constructor() {
     this.jsonInput = document.getElementById('jsonInput');
+    this.inputToggleBtn = document.getElementById('inputToggleBtn');
+    this.workspace = document.querySelector('.workspace');
+    this.previewPane = document.querySelector('.preview-pane');
     this.errorBanner = document.getElementById('errorBanner');
     this.breadcrumbBar = document.getElementById('breadcrumbBar');
     this.thead = document.getElementById('tableHead');
@@ -9,8 +12,11 @@ class JsonVisualizer {
     this.filterChildKey = document.getElementById('filterChildKey');
     this.filterOp = document.getElementById('filterOp');
     this.filterVal = document.getElementById('filterVal');
+    this.filterValInput = document.getElementById('filterValInput');
     this.filterBar = document.getElementById('filterBar');
     this.tableContainer = document.getElementById('tableContainer');
+    this.tableFormattedContainer = document.getElementById('tableFormattedContainer');
+    this.tableFormattedToggle = document.getElementById('tableFormattedToggle');
     this.treeContainer = document.getElementById('treeContainer');
     this.formattedContainer = document.getElementById('formattedContainer');
     this.view = 'formatted'; // 'table' | 'tree'
@@ -19,30 +25,33 @@ class JsonVisualizer {
 
     this.rootData = null;
     this.pathStack = [];
+    this.inputUpdateTimer = null;
+    this.dataVersion = 0;
 
-    this.jsonInput.value = JSON.stringify({
-      status: "success",
-      code: 200,
-      metadata: { page: 1, limit: 10, total: 50 },
-      users: [
-        {
-          id: 101,
-          name: "Alice",
-          role: "Admin",
-          profile: { title: "Lead Architect", department: "Engineering" },
-          settings: { theme: "dark", notifications: true }
-        },
-        {
-          id: 102,
-          name: "Bob",
-          role: "Developer",
-          profile: { title: "Backend Engineer", department: "Infrastructure" },
-          settings: { theme: "light", notifications: false }
-        }
-      ]
-    }, null, 2);
+    this.jsonInput.value = JSON.stringify(this.createSampleData(), null, 2);
 
-    this.jsonInput.addEventListener('input', () => this.processJSON());
+    this.jsonInput.addEventListener('input', () => {
+      clearTimeout(this.inputUpdateTimer);
+      this.inputUpdateTimer = setTimeout(() => this.processJSON(), 150);
+    });
+    this.inputToggleBtn.onclick = () => {
+      this.setInputPanelCollapsed(!this.workspace.classList.contains('input-collapsed'));
+    };
+    if (this.tableFormattedToggle) this.tableFormattedToggle.onclick = () => {
+      const isCollapsed = this.workspace.classList.toggle('table-formatted-collapsed');
+      this.tableFormattedToggle.textContent = isCollapsed ? '\u2039' : '\u203a';
+      this.tableFormattedToggle.title = isCollapsed ? 'Show formatted preview' : 'Hide formatted preview';
+      this.tableFormattedToggle.setAttribute('aria-label', this.tableFormattedToggle.title);
+      this.tableFormattedToggle.setAttribute('aria-expanded', String(!isCollapsed));
+    };
+
+    this.setInputPanelCollapsed = (isCollapsed) => {
+      this.inputToggleBtn.textContent = isCollapsed ? '\u203a' : '\u2039';
+      this.inputToggleBtn.title = isCollapsed ? 'Show raw JSON input' : 'Hide raw JSON input';
+      this.inputToggleBtn.setAttribute('aria-label', this.inputToggleBtn.title);
+      this.inputToggleBtn.setAttribute('aria-expanded', String(!isCollapsed));
+      this.workspace.classList.toggle('input-collapsed', isCollapsed);
+    };
     document.getElementById('clearInputBtn').onclick = () => {
       this.jsonInput.value = '';
       this.rootData = null;
@@ -52,6 +61,10 @@ class JsonVisualizer {
 
       this.formattedContainer.style.display = 'block';
       this.tableContainer.style.display = 'none';
+      this.tableFormattedContainer.style.display = 'none';
+      this.tableFormattedToggle.style.display = 'none';
+      this.setInputPanelCollapsed(false);
+      this.inputToggleBtn.style.display = 'block';
       this.treeContainer.style.display = 'none';
       this.filterBar.style.display = 'none';
       this.thead.innerHTML = '';
@@ -72,23 +85,30 @@ class JsonVisualizer {
       this.refreshFilterChildOptions();
       this.refreshFilterValueOptions();
       this.refreshFilterOperator();
+      this.toggleFilterValMode();
       this.applyFilter();
     });
     this.filterChildKey.addEventListener('change', () => {
       this.refreshFilterValueOptions();
       this.refreshFilterOperator();
+      this.toggleFilterValMode();
       this.applyFilter();
     });
-    this.filterOp.addEventListener('change', () => this.applyFilter());
+    this.filterOp.addEventListener('change', () => { this.toggleFilterValMode(); this.applyFilter(); });
     this.filterVal.addEventListener('change', () => this.applyFilter());
+    this.filterValInput.addEventListener('input', () => this.applyFilter());
     document.getElementById('filterClear').onclick = () => {
       this.filterKey.value = '';
       this.filterChildKey.value = '';
       this.filterChildKey.style.display = 'none';
       this.filterVal.innerHTML = '<option value="">— value —</option>';
       this.filterVal.value = '';
+      this.filterValInput.value = '';
+      this.filterValInput.style.display = 'none';
+      this.filterVal.style.display = '';
       this.filterOp.style.display = 'none';
-      this.filterOp.value = 'contains';
+      this.filterOp.value = 'equals';
+      this.filterOp.querySelectorAll('option').forEach(o => o.disabled = false);
       this.applyFilter();
     };
 
@@ -103,6 +123,36 @@ class JsonVisualizer {
       }
     });
 
+    document.getElementById('fmtExpandAll').onclick = () => {
+      document.querySelectorAll('#formattedPre .fmt-node').forEach(node => node.classList.remove('fmt-collapsed'));
+      document.querySelectorAll('#formattedPre .fmt-toggle').forEach(t => { t.textContent = '▾'; });
+    };
+    document.getElementById('fmtCollapseAll').onclick = () => {
+      document.querySelectorAll('#formattedPre .fmt-node').forEach(node => node.classList.add('fmt-collapsed'));
+      document.querySelectorAll('#formattedPre .fmt-toggle').forEach(t => { t.textContent = '▸'; });
+    };
+    document.getElementById('tableFmtExpandAll').onclick = () => {
+      document.querySelectorAll('#tableFormattedPre .fmt-node').forEach(node => node.classList.remove('fmt-collapsed'));
+      document.querySelectorAll('#tableFormattedPre .fmt-toggle').forEach(t => { t.textContent = '▾'; });
+    };
+    document.getElementById('tableFmtCollapseAll').onclick = () => {
+      document.querySelectorAll('#tableFormattedPre .fmt-node').forEach(node => node.classList.add('fmt-collapsed'));
+      document.querySelectorAll('#tableFormattedPre .fmt-toggle').forEach(t => { t.textContent = '▸'; });
+    };
+    document.getElementById('treeExpandAll').onclick = () => {
+      document.querySelectorAll('#treeContent .tree-children').forEach(c => {
+        c.classList.remove('collapsed');
+        const t = c.previousElementSibling && c.previousElementSibling.querySelector('.tree-toggle');
+        if (t) t.textContent = '▾';
+      });
+    };
+    document.getElementById('treeCollapseAll').onclick = () => {
+      document.querySelectorAll('#treeContent .tree-children').forEach(c => {
+        c.classList.add('collapsed');
+        const t = c.previousElementSibling && c.previousElementSibling.querySelector('.tree-toggle');
+        if (t) t.textContent = '▸';
+      });
+    };
     document.getElementById('copyBtn').onclick = () => {
       if (!this.rootData) return;
       const formatted = this.formatJsonOutput();
@@ -131,30 +181,125 @@ class JsonVisualizer {
     this.formattedContainer.style.display = 'block';
     this.tableContainer.style.display = 'none';
     this.treeContainer.style.display = 'none';
+    this.setInputPanelCollapsed(false);
+    this.inputToggleBtn.style.display = 'block';
     document.getElementById('breadcrumbBar').style.visibility = 'hidden';
 
     this.processJSON();
   }
 
+  createSampleData() {
+    const categories = ['Engineering', 'Operations', 'Research', 'Support', 'Security', 'Analytics'];
+    const regions = ['North America', 'Europe', 'Asia Pacific'];
+    const records = [];
+
+    categories.forEach((category, categoryIndex) => {
+      const items = [];
+      for (let itemIndex = 0; itemIndex < 5; itemIndex++) {
+        items.push({
+          id: `${categoryIndex + 1}-${itemIndex + 1}`,
+          name: `${category} Service ${itemIndex + 1}`,
+          status: itemIndex % 3 === 0 ? 'active' : itemIndex % 3 === 1 ? 'review' : 'paused',
+          ownership: {
+            team: `${category} Platform Team`,
+            lead: {
+              name: `Owner ${categoryIndex + 1}${itemIndex + 1}`,
+              contact: {
+                email: `owner${categoryIndex + 1}${itemIndex + 1}@example.com`,
+                channels: ['email', 'chat', 'phone']
+              }
+            },
+            regions: regions.map((region, regionIndex) => ({
+              name: region,
+              enabled: regionIndex !== itemIndex % regions.length,
+              offices: [`${region} Hub`, `${region} Satellite`]
+            }))
+          },
+          configuration: {
+            version: `v${categoryIndex + 1}.${itemIndex + 2}.0`,
+            limits: {
+              requests: 1000 + itemIndex * 250,
+              storage: { value: 25 + itemIndex * 10, unit: 'GB' },
+              burst: { enabled: true, multiplier: 2 + itemIndex }
+            },
+            features: {
+              auditLog: true,
+              notifications: itemIndex % 2 === 0,
+              integrations: [
+                { name: 'slack', enabled: true, scopes: ['read', 'write'] },
+                { name: 'webhook', enabled: itemIndex !== 2, scopes: ['publish', 'retry'] }
+              ]
+            }
+          },
+          history: Array.from({ length: 4 }, (_, historyIndex) => ({
+            changedAt: `2026-0${historyIndex + 1}-1${itemIndex + 1}`,
+            action: historyIndex % 2 === 0 ? 'updated' : 'reviewed',
+            actor: {
+              id: `actor-${categoryIndex + 1}-${historyIndex + 1}`,
+              permissions: ['read', 'write', historyIndex % 2 === 0 ? 'approve' : 'comment']
+            },
+            changes: {
+              field: historyIndex % 2 === 0 ? 'configuration' : 'ownership',
+              from: historyIndex,
+              to: historyIndex + 1,
+              notes: ['validated', 'documented', 'escalated']
+            }
+          }))
+        });
+      }
+
+      records.push({
+        category,
+        summary: {
+          priority: categoryIndex % 2 === 0 ? 'high' : 'normal',
+          itemCount: items.length,
+          contacts: items.map(item => item.ownership.lead.contact.email)
+        },
+        services: items
+      });
+    });
+
+    return {
+      status: 'success',
+      generatedAt: '2026-09-02T00:00:00Z',
+      metadata: {
+        source: 'sample catalog',
+        pagination: { page: 1, size: records.length, total: records.length },
+        filters: { statuses: ['active', 'review', 'paused'], regions }
+      },
+      catalog: records
+    };
+  }
+
   setView(view) {
     this.view = view;
+    this.previewPane.classList.toggle('table-mode', view === 'table');
+    const isTableView = view === 'table';
+    this.setInputPanelCollapsed(isTableView);
+    this.inputToggleBtn.style.display = 'block';
     ['btnFormatted','btnTable','btnTree'].forEach(id =>
       document.getElementById(id).classList.toggle('active', id === `btn${view.charAt(0).toUpperCase()+view.slice(1)}`)
     );
     this.formattedContainer.style.display = view === 'formatted' ? 'block' : 'none';
     this.tableContainer.style.display = view === 'table' ? '' : 'none';
+    this.tableFormattedContainer.style.display = view === 'table' ? 'flex' : 'none';
+    this.tableFormattedToggle.style.display = view === 'table' ? 'block' : 'none';
     this.treeContainer.style.display = view === 'tree' ? 'block' : 'none';
     document.getElementById('breadcrumbBar').style.visibility = view === 'table' ? 'visible' : 'hidden';
     const currentData = this.pathStack[this.pathStack.length - 1]?.data;
     this.filterBar.style.display = view === 'table' && Array.isArray(currentData) && currentData.length > 1 ? 'flex' : 'none';
     if (view === 'tree') this.renderTreeView();
     if (view === 'formatted') this.renderFormattedView();
-    if (view === 'table') this.renderCurrentLevel();
+    if (view === 'table') {
+      this.renderCurrentLevel();
+    }
   }
 
   renderTreeView() {
-    this.treeContainer.innerHTML = '';
-    this.treeContainer.appendChild(this.buildTreeNode(this.rootData, null));
+    const treeContent = document.getElementById('treeContent');
+    treeContent.innerHTML = '';
+    treeContent.appendChild(this.buildTreeNode(this.rootData, null));
+    document.getElementById('treeToolbar').style.display = 'flex';
   }
 
   buildTreeNode(val, key) {
@@ -350,7 +495,13 @@ class JsonVisualizer {
 
   processJSON() {
     const rawVal = this.jsonInput.value.trim();
-    if (!rawVal) return;
+    if (!rawVal) {
+      this.view = 'formatted';
+      this.previewPane.classList.remove('table-mode');
+      this.setInputPanelCollapsed(false);
+      this.inputToggleBtn.style.display = 'block';
+      return;
+    }
 
     let parsed = null;
     let fixed = false;
@@ -380,6 +531,7 @@ class JsonVisualizer {
     }
 
     this.rootData = parsed;
+    this.dataVersion += 1;
     this.pathStack = [{ label: '$', data: this.rootData }];
     this.renderCurrentLevel();
   }
@@ -392,10 +544,140 @@ class JsonVisualizer {
     return json;
   }
 
-  renderFormattedView() {
+  renderFormattedView(elementId = 'formattedPre') {
     if (!this.rootData) return;
-    const pre = document.getElementById('formattedPre');
-    pre.innerHTML = this.syntaxHighlight(this.formatJsonOutput());
+    const pre = document.getElementById(elementId);
+    if (!pre) return;
+    const renderKey = `${this.dataVersion}:${this.unquoteKeys}:${this.minify}`;
+    if (pre.dataset.renderKey === renderKey && pre.childNodes.length > 0) return;
+    const collapsedPaths = new Set(
+      [...pre.querySelectorAll('.fmt-node.fmt-collapsed[data-fmt-path]')]
+        .map(node => node.dataset.fmtPath)
+    );
+    if (this.minify) {
+      pre.innerHTML = this.syntaxHighlight(this.formatJsonOutput());
+      pre.dataset.renderKey = renderKey;
+      return;
+    }
+    pre.innerHTML = '';
+    pre.appendChild(this.buildFoldableNode(this.rootData, null, true, [], collapsedPaths));
+    pre.dataset.renderKey = renderKey;
+  }
+
+  buildFoldableNode(val, key, isLast, path = [], collapsedPaths = new Set()) {
+    const wrap = document.createElement('span');
+    wrap.className = 'fmt-node';
+    wrap.dataset.fmtPath = JSON.stringify(path);
+    if (collapsedPaths.has(wrap.dataset.fmtPath)) wrap.classList.add('fmt-collapsed');
+    const suffix = isLast ? '' : ',';
+
+    if (key !== null) {
+      const keySpan = document.createElement('span');
+      keySpan.className = 'fmt-key';
+      keySpan.textContent = (this.unquoteKeys && /^[a-zA-Z_$][\w$]*$/.test(key)) ? key : '"' + key + '"';
+      const colon = document.createElement('span');
+      colon.className = 'fmt-punct';
+      colon.textContent = ': ';
+      wrap.appendChild(keySpan);
+      wrap.appendChild(colon);
+    }
+
+    if (val === null) {
+      const s = document.createElement('span');
+      s.className = 'fmt-null';
+      s.textContent = 'null' + suffix;
+      wrap.appendChild(s);
+      return wrap;
+    }
+    if (typeof val === 'boolean') {
+      const s = document.createElement('span');
+      s.className = 'fmt-bool';
+      s.textContent = String(val) + suffix;
+      wrap.appendChild(s);
+      return wrap;
+    }
+    if (typeof val === 'number') {
+      const s = document.createElement('span');
+      s.className = 'fmt-number';
+      s.textContent = String(val) + suffix;
+      wrap.appendChild(s);
+      return wrap;
+    }
+    if (typeof val === 'string') {
+      const s = document.createElement('span');
+      s.className = 'fmt-string';
+      s.textContent = '"' + val.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"' + suffix;
+      wrap.appendChild(s);
+      return wrap;
+    }
+
+    const isArr = Array.isArray(val);
+    const entries = isArr ? val : Object.entries(val);
+    const count = entries.length;
+
+    const toggleBtn = document.createElement('span');
+    toggleBtn.className = 'fmt-toggle';
+    const isCollapsed = collapsedPaths.has(JSON.stringify(path));
+    toggleBtn.textContent = isCollapsed ? '▸' : '▾';
+
+    const openPunct = document.createElement('span');
+    openPunct.className = 'fmt-punct';
+    openPunct.textContent = isArr ? '[' : '{';
+
+    const summary = document.createElement('span');
+    summary.className = 'fmt-summary';
+    summary.textContent = count > 0 ? (isArr ? ` (${count} items)` : ` (${count} keys)`) : '';
+
+    const collapsedContent = document.createElement('span');
+    collapsedContent.className = 'fmt-collapsed-content';
+    collapsedContent.textContent = count > 0 ? '...' : '';
+
+    const block = document.createElement('span');
+    block.className = 'fmt-block';
+
+    if (isArr) {
+      val.forEach((item, i) => {
+        const line = document.createElement('div');
+        line.className = 'fmt-line';
+        line.appendChild(this.buildFoldableNode(item, null, i === val.length - 1, [...path, i], collapsedPaths));
+        block.appendChild(line);
+      });
+    } else {
+      entries.forEach(([k, v], i) => {
+        const line = document.createElement('div');
+        line.className = 'fmt-line';
+        line.appendChild(this.buildFoldableNode(v, k, i === entries.length - 1, [...path, k], collapsedPaths));
+        block.appendChild(line);
+      });
+    }
+
+    const closePunct = document.createElement('span');
+    closePunct.className = 'fmt-punct fmt-close-line';
+    closePunct.textContent = isArr ? ']' : '}';
+
+    const expandedSuffix = document.createElement('span');
+    expandedSuffix.className = 'fmt-expanded-suffix';
+    expandedSuffix.textContent = suffix;
+    closePunct.appendChild(expandedSuffix);
+
+    const suffixPunct = document.createElement('span');
+    suffixPunct.className = 'fmt-punct fmt-suffix';
+    suffixPunct.textContent = suffix;
+
+    toggleBtn.onclick = (e) => {
+      e.stopPropagation();
+      const collapsed = wrap.classList.toggle('fmt-collapsed');
+      toggleBtn.textContent = collapsed ? '▸' : '▾';
+    };
+
+    wrap.insertBefore(toggleBtn, wrap.firstChild);
+    wrap.appendChild(openPunct);
+    wrap.appendChild(collapsedContent);
+    wrap.appendChild(block);
+    wrap.appendChild(closePunct);
+    wrap.appendChild(summary);
+    wrap.appendChild(suffixPunct);
+    return wrap;
   }
 
   syntaxHighlight(json) {
@@ -473,6 +755,8 @@ class JsonVisualizer {
 
     this.applyFilter();
 
+    this.renderFormattedView('tableFormattedPre');
+
     this.tbody.onclick = (e) => {
       const btn = e.target.closest('[data-key]');
       const td = e.target.closest('td');
@@ -516,8 +800,8 @@ class JsonVisualizer {
     const current = this.pathStack[this.pathStack.length - 1];
     const targetData = current.data;
     const rows = Array.isArray(targetData) ? targetData : [targetData];
-
     const childKeys = new Set();
+
     rows.forEach(row => {
       const value = (typeof row === 'object' && row !== null) ? row[key] : row;
       if (value && typeof value === 'object') {
@@ -559,29 +843,38 @@ class JsonVisualizer {
 
     if (!key) {
       this.filterOp.style.display = 'none';
-      this.filterOp.value = 'contains';
+      this.filterOp.value = 'equals';
       return;
     }
 
-    let allStringLike = true;
+    let hasNumeric = false;
     rows.forEach(row => {
-      const value = this.resolveFilterValue(row, key, childKey);
-      if (value === null || value === undefined) return;
-      if (typeof value !== 'string') {
-        allStringLike = false;
-      }
+      const raw = (typeof row === 'object' && row !== null) ? row[key] : row;
+      const actual = childKey
+        ? (raw && typeof raw === 'object' ? raw[childKey] : null)
+        : ((typeof row === 'object' && row !== null) ? row[key] : row);
+      if (typeof actual === 'number') hasNumeric = true;
     });
 
-    if (allStringLike) {
-      this.filterOp.style.display = 'none';
-      this.filterOp.value = 'equals';
-      return;
-    }
-
     this.filterOp.style.display = 'inline-block';
-    if (!['gt', 'lt'].includes(this.filterOp.value)) {
-      this.filterOp.value = 'equals';
+    this.filterOp.querySelectorAll('option').forEach(o => o.disabled = false);
+    if (!hasNumeric) {
+      ['gt', 'lt'].forEach(v => {
+        const opt = this.filterOp.querySelector(`option[value="${v}"]`);
+        if (opt) opt.disabled = true;
+      });
+      if (['gt', 'lt'].includes(this.filterOp.value)) this.filterOp.value = 'equals';
     }
+    this.toggleFilterValMode();
+  }
+
+  toggleFilterValMode() {
+    const op = this.filterOp.value;
+    const useInput = op !== 'equals';
+    this.filterVal.style.display = useInput ? 'none' : '';
+    this.filterValInput.style.display = useInput ? '' : 'none';
+    if (!useInput) this.filterValInput.value = '';
+    else this.filterVal.value = '';
   }
 
   refreshFilterValueOptions() {
@@ -668,7 +961,8 @@ class JsonVisualizer {
     const key = this.filterKey.value;
     const childKey = this.filterChildKey.style.display !== 'none' ? this.filterChildKey.value : '';
     const op = this.filterOp.value;
-    const selectedValue = this.filterVal.value;
+    const useInput = op !== 'equals';
+    const selectedValue = useInput ? this.filterValInput.value : this.filterVal.value;
     const search = selectedValue.trim();
 
     const current = this.pathStack[this.pathStack.length - 1];
@@ -699,6 +993,8 @@ class JsonVisualizer {
         match = cellStr.includes(selectedValue.toLowerCase());
       } else if (op === 'starts') {
         match = cellStr.startsWith(selectedValue.toLowerCase());
+      } else if (op === 'ends') {
+        match = cellStr.endsWith(selectedValue.toLowerCase());
       } else if (op === 'gt') {
         match = !isNaN(numVal) && !isNaN(numSearch) && numVal > numSearch;
       } else if (op === 'lt') {
