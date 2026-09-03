@@ -21,7 +21,6 @@ class UIHandlers {
   setupViewContainers() {
     const formattedContainer = document.getElementById('formattedContainer');
     const tableContainer = document.getElementById('tableContainer');
-    const treeContainer = document.getElementById('treeContainer');
     const breadcrumbBar = document.getElementById('breadcrumbBar');
     const filterBar = document.getElementById('filterBar');
     const errorBanner = document.getElementById('errorBanner');
@@ -36,7 +35,6 @@ class UIHandlers {
     // Initialize visibility
     if (formattedContainer) formattedContainer.style.display = 'block';
     if (tableContainer) tableContainer.style.display = 'none';
-    if (treeContainer) treeContainer.style.display = 'none';
     if (breadcrumbBar) breadcrumbBar.style.visibility = 'hidden';
     if (filterBar) filterBar.style.display = 'none';
     if (errorBanner) errorBanner.style.display = 'none';
@@ -66,7 +64,6 @@ class UIHandlers {
 
         const formattedContainer = document.getElementById('formattedContainer');
         const tableContainer = document.getElementById('tableContainer');
-        const treeContainer = document.getElementById('treeContainer');
         const breadcrumbBar = document.getElementById('breadcrumbBar');
         const filterBar = document.getElementById('filterBar');
         const tableHead = document.getElementById('tableHead');
@@ -75,8 +72,6 @@ class UIHandlers {
 
         if (formattedContainer) formattedContainer.style.display = 'block';
         if (tableContainer) tableContainer.style.display = 'none';
-        if (treeContainer) treeContainer.style.display = 'none';
-        if (treeContainer) treeContainer.innerHTML = '';
         if (filterBar) filterBar.style.display = 'none';
         if (tableHead) tableHead.innerHTML = '';
         if (tableBody) tableBody.innerHTML = '';
@@ -86,7 +81,7 @@ class UIHandlers {
         }
         if (formattedPre) formattedPre.innerHTML = '';
 
-        ['btnFormatted', 'btnTable', 'btnTree'].forEach(id => {
+        ['btnFormatted', 'btnTable'].forEach(id => {
           const btn = document.getElementById(id);
           if (btn) btn.classList.toggle('active', id === 'btnFormatted');
         });
@@ -149,11 +144,9 @@ class UIHandlers {
   setupViewToggleHandlers() {
     const btnFormatted = document.getElementById('btnFormatted');
     const btnTable = document.getElementById('btnTable');
-    const btnTree = document.getElementById('btnTree');
 
     if (btnFormatted) btnFormatted.onclick = () => this.setView('formatted');
     if (btnTable) btnTable.onclick = () => this.setView('table');
-    if (btnTree) btnTree.onclick = () => this.setView('tree');
   }
 
   setupCopyHandler() {
@@ -243,7 +236,6 @@ class UIHandlers {
 
       const formattedContainer = document.getElementById('formattedContainer');
       const tableContainer = document.getElementById('tableContainer');
-      const treeContainer = document.getElementById('treeContainer');
       const breadcrumbBar = document.getElementById('breadcrumbBar');
       const filterBar = document.getElementById('filterBar');
       const tableHead = document.getElementById('tableHead');
@@ -252,8 +244,6 @@ class UIHandlers {
 
       if (formattedContainer) formattedContainer.style.display = 'block';
       if (tableContainer) tableContainer.style.display = 'none';
-      if (treeContainer) treeContainer.style.display = 'none';
-      if (treeContainer) treeContainer.innerHTML = '';
       if (filterBar) filterBar.style.display = 'none';
       if (tableHead) tableHead.innerHTML = '';
       if (tableBody) tableBody.innerHTML = '';
@@ -264,7 +254,7 @@ class UIHandlers {
       if (formattedPre) formattedPre.innerHTML = '';
       if (errorBanner) errorBanner.style.display = 'none';
 
-      ['btnFormatted', 'btnTable', 'btnTree'].forEach(id => {
+      ['btnFormatted', 'btnTable'].forEach(id => {
         const btn = document.getElementById(id);
         if (btn) btn.classList.toggle('active', id === 'btnFormatted');
       });
@@ -300,13 +290,12 @@ class UIHandlers {
 
   setView(view) {
     this.state.view = view;
-    ['btnFormatted', 'btnTable', 'btnTree'].forEach(id =>
+    ['btnFormatted', 'btnTable'].forEach(id =>
       document.getElementById(id).classList.toggle('active', id === `btn${view.charAt(0).toUpperCase() + view.slice(1)}`)
     );
 
     document.getElementById('formattedContainer').style.display = view === 'formatted' ? 'block' : 'none';
     document.getElementById('tableContainer').style.display = view === 'table' ? '' : 'none';
-    document.getElementById('treeContainer').style.display = view === 'tree' ? 'block' : 'none';
     document.getElementById('breadcrumbBar').style.visibility = view === 'table' ? 'visible' : 'hidden';
 
     const currentData = this.state.pathStack[this.state.pathStack.length - 1]?.data;
@@ -332,12 +321,10 @@ class UIHandlers {
     // Show/hide containers based on current view
     const formattedContainer = document.getElementById('formattedContainer');
     const tableContainer = document.getElementById('tableContainer');
-    const treeContainer = document.getElementById('treeContainer');
 
     if (this.state.view === 'formatted') {
       if (formattedContainer) formattedContainer.style.display = 'block';
       if (tableContainer) tableContainer.style.display = 'none';
-      if (treeContainer) treeContainer.style.display = 'none';
       this.renderers.renderFormattedView(this.state.rootData, {
         minify: this.state.minify,
         unquoteKeys: this.state.unquoteKeys
@@ -345,18 +332,9 @@ class UIHandlers {
       return;
     }
 
-    if (this.state.view === 'tree') {
-      if (formattedContainer) formattedContainer.style.display = 'none';
-      if (tableContainer) tableContainer.style.display = 'none';
-      if (treeContainer) treeContainer.style.display = 'block';
-      this.renderers.renderTreeView(this.state.rootData);
-      return;
-    }
-
     // Table view
     if (formattedContainer) formattedContainer.style.display = 'none';
     if (tableContainer) tableContainer.style.display = '';
-    if (treeContainer) treeContainer.style.display = 'none';
 
     const result = this.renderers.renderTableView(targetData, this.state.pathStack);
     const { rows, headers } = result;

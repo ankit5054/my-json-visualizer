@@ -312,18 +312,6 @@ textarea:focus {
   border-radius: 6px 0 0 6px;
   font-size: 30px;
 }
-.tree-container { flex: 1; overflow: auto; display: none; font-family: monospace; font-size: 12px; }
-.tree-toolbar {
-  display: none;
-  gap: 6px;
-  padding: 6px 16px;
-  background: var(--bg-header);
-  border-bottom: 1px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-#treeContent { padding: 12px 16px; }
 .formatted-container { flex: 1; overflow: auto; display: none; }
 
 .formatted-toolbar {
@@ -362,37 +350,6 @@ textarea:focus {
 .fmt-bool   { color: #569cd6; }
 .fmt-null   { color: #569cd6; font-style: italic; }
 .fmt-punct  { color: #858585; }
-
-.tree-node { user-select: none; }
-
-.tree-row {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  padding: 2px 0;
-  border-radius: 3px;
-  cursor: default;
-}
-
-.tree-row:hover { background: var(--hover-bg); }
-
-.tree-toggle {
-  width: 14px;
-  flex-shrink: 0;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 12px;
-  text-align: center;
-  line-height: 1.6;
-}
-
-.tree-toggle:hover { color: #fff; }
-
-.tree-key { color: #9cdcfe; }
-.tree-colon { color: var(--text-muted); margin-right: 4px; }
-.tree-meta { color: var(--text-muted); font-size: 12px; }
-.tree-children { padding-left: 20px; border-left: 1px solid var(--border-color); margin-left: 6px; }
-.tree-children.collapsed { display: none; }
 
 table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
 

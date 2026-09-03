@@ -17,11 +17,13 @@ class JsonVisualizer {
     this.tableContainer = document.getElementById('tableContainer');
     this.tableFormattedContainer = document.getElementById('tableFormattedContainer');
     this.tableFormattedToggle = document.getElementById('tableFormattedToggle');
-    this.treeContainer = document.getElementById('treeContainer');
     this.formattedContainer = document.getElementById('formattedContainer');
     this.view = 'formatted'; // 'table' | 'tree'
     this.unquoteKeys = false;
     this.minify = false;
+    this.tablePreviewOpen = false;
+    this.tablePreviewData = null;
+    this.tablePreviewPath = '$';
 
     this.rootData = null;
     this.pathStack = [];
@@ -38,11 +40,8 @@ class JsonVisualizer {
       this.setInputPanelCollapsed(!this.workspace.classList.contains('input-collapsed'));
     };
     if (this.tableFormattedToggle) this.tableFormattedToggle.onclick = () => {
-      const isCollapsed = this.workspace.classList.toggle('table-formatted-collapsed');
-      this.tableFormattedToggle.textContent = isCollapsed ? '\u2039' : '\u203a';
-      this.tableFormattedToggle.title = isCollapsed ? 'Show formatted preview' : 'Hide formatted preview';
-      this.tableFormattedToggle.setAttribute('aria-label', this.tableFormattedToggle.title);
-      this.tableFormattedToggle.setAttribute('aria-expanded', String(!isCollapsed));
+      this.tablePreviewOpen = !this.tablePreviewOpen;
+      this.syncTableFormattedPanel();
     };
 
     this.setInputPanelCollapsed = (isCollapsed) => {
@@ -65,18 +64,16 @@ class JsonVisualizer {
       this.tableFormattedToggle.style.display = 'none';
       this.setInputPanelCollapsed(false);
       this.inputToggleBtn.style.display = 'block';
-      this.treeContainer.style.display = 'none';
       this.filterBar.style.display = 'none';
       this.thead.innerHTML = '';
       this.tbody.innerHTML = '';
-      this.treeContainer.innerHTML = '';
       this.breadcrumbBar.innerHTML = 'Path:';
       this.breadcrumbBar.style.visibility = 'hidden';
 
       const pre = this.formattedContainer.querySelector('#formattedPre');
       if (pre) pre.innerHTML = '';
 
-      ['btnFormatted', 'btnTable', 'btnTree'].forEach(id => {
+      ['btnFormatted', 'btnTable'].forEach(id => {
         const btn = document.getElementById(id);
         if (btn) btn.classList.toggle('active', id === 'btnFormatted');
       });
@@ -139,20 +136,6 @@ class JsonVisualizer {
       document.querySelectorAll('#tableFormattedPre .fmt-node').forEach(node => node.classList.add('fmt-collapsed'));
       document.querySelectorAll('#tableFormattedPre .fmt-toggle').forEach(t => { t.textContent = '▸'; });
     };
-    document.getElementById('treeExpandAll').onclick = () => {
-      document.querySelectorAll('#treeContent .tree-children').forEach(c => {
-        c.classList.remove('collapsed');
-        const t = c.previousElementSibling && c.previousElementSibling.querySelector('.tree-toggle');
-        if (t) t.textContent = '▾';
-      });
-    };
-    document.getElementById('treeCollapseAll').onclick = () => {
-      document.querySelectorAll('#treeContent .tree-children').forEach(c => {
-        c.classList.add('collapsed');
-        const t = c.previousElementSibling && c.previousElementSibling.querySelector('.tree-toggle');
-        if (t) t.textContent = '▸';
-      });
-    };
     document.getElementById('copyBtn').onclick = () => {
       if (!this.rootData) return;
       const formatted = this.formatJsonOutput();
@@ -166,7 +149,6 @@ class JsonVisualizer {
 
     document.getElementById('btnFormatted').onclick = () => this.setView('formatted');
     document.getElementById('btnTable').onclick = () => this.setView('table');
-    document.getElementById('btnTree').onclick = () => this.setView('tree');
 
     document.getElementById('unquoteKeysChk').onchange = (e) => {
       this.unquoteKeys = e.target.checked;
@@ -180,7 +162,6 @@ class JsonVisualizer {
 
     this.formattedContainer.style.display = 'block';
     this.tableContainer.style.display = 'none';
-    this.treeContainer.style.display = 'none';
     this.setInputPanelCollapsed(false);
     this.inputToggleBtn.style.display = 'block';
     document.getElementById('breadcrumbBar').style.visibility = 'hidden';
@@ -277,93 +258,62 @@ class JsonVisualizer {
     const isTableView = view === 'table';
     this.setInputPanelCollapsed(isTableView);
     this.inputToggleBtn.style.display = 'block';
-    ['btnFormatted','btnTable','btnTree'].forEach(id =>
+    ['btnFormatted','btnTable'].forEach(id =>
       document.getElementById(id).classList.toggle('active', id === `btn${view.charAt(0).toUpperCase()+view.slice(1)}`)
     );
     this.formattedContainer.style.display = view === 'formatted' ? 'block' : 'none';
     this.tableContainer.style.display = view === 'table' ? '' : 'none';
-    this.tableFormattedContainer.style.display = view === 'table' ? 'flex' : 'none';
     this.tableFormattedToggle.style.display = view === 'table' ? 'block' : 'none';
-    this.treeContainer.style.display = view === 'tree' ? 'block' : 'none';
+    this.tablePreviewOpen = view === 'table';
+    this.tablePreviewData = view === 'table' ? (this.pathStack[this.pathStack.length - 1]?.data ?? this.rootData) : null;
+    this.tablePreviewPath = view === 'table' ? this.pathStack.map(entry => entry.label).join('') || '$' : '$';
+    this.syncTableFormattedPanel();
     document.getElementById('breadcrumbBar').style.visibility = view === 'table' ? 'visible' : 'hidden';
     const currentData = this.pathStack[this.pathStack.length - 1]?.data;
     this.filterBar.style.display = view === 'table' && Array.isArray(currentData) && currentData.length > 1 ? 'flex' : 'none';
-    if (view === 'tree') this.renderTreeView();
     if (view === 'formatted') this.renderFormattedView();
     if (view === 'table') {
       this.renderCurrentLevel();
     }
   }
 
-  renderTreeView() {
-    const treeContent = document.getElementById('treeContent');
-    treeContent.innerHTML = '';
-    treeContent.appendChild(this.buildTreeNode(this.rootData, null));
-    document.getElementById('treeToolbar').style.display = 'flex';
+  syncTableFormattedPanel() {
+    if (!this.tableFormattedToggle || !this.tableFormattedContainer) return;
+    const isCollapsed = !this.tablePreviewOpen;
+    this.workspace.classList.toggle('table-formatted-collapsed', isCollapsed);
+    this.tableFormattedContainer.style.display = this.tablePreviewOpen ? 'flex' : 'none';
+    this.tableFormattedToggle.textContent = this.tablePreviewOpen ? '\u203a' : '\u2039';
+    this.tableFormattedToggle.title = this.tablePreviewOpen ? 'Hide formatted preview' : 'Show formatted preview';
+    this.tableFormattedToggle.setAttribute('aria-label', this.tableFormattedToggle.title);
+    this.tableFormattedToggle.setAttribute('aria-expanded', String(this.tablePreviewOpen));
   }
 
-  buildTreeNode(val, key) {
-    const node = document.createElement('div');
-    node.className = 'tree-node';
-
-    const row = document.createElement('div');
-    row.className = 'tree-row';
-
-    const toggle = document.createElement('span');
-    toggle.className = 'tree-toggle';
-
-    const label = document.createElement('span');
-
-    const isComplex = val !== null && typeof val === 'object';
-
-    if (key !== null) {
-      const keySpan = document.createElement('span');
-      keySpan.className = 'tree-key';
-      keySpan.textContent = key;
-      const colon = document.createElement('span');
-      colon.className = 'tree-colon';
-      colon.textContent = ': ';
-      row.appendChild(toggle);
-      row.appendChild(keySpan);
-      row.appendChild(colon);
-    } else {
-      row.appendChild(toggle);
+  renderTableFormattedPreview() {
+    const pre = document.getElementById('tableFormattedPre');
+    if (!pre) return;
+    if (!this.tablePreviewOpen) {
+      pre.innerHTML = '';
+      return;
     }
 
-    if (isComplex) {
-      const isArr = Array.isArray(val);
-      const count = isArr ? val.length : Object.keys(val).length;
-      const meta = document.createElement('span');
-      meta.className = 'tree-meta';
-      meta.textContent = isArr ? `[ ${count} items ]` : `{ ${count} keys }`;
-      toggle.textContent = '▾';
-      row.appendChild(meta);
-
-      const children = document.createElement('div');
-      children.className = 'tree-children';
-
-      if (isArr) {
-        val.forEach((item, i) => children.appendChild(this.buildTreeNode(item, String(i))));
-      } else {
-        Object.entries(val).forEach(([k, v]) => children.appendChild(this.buildTreeNode(v, k)));
-      }
-
-      toggle.onclick = (e) => {
-        e.stopPropagation();
-        const collapsed = children.classList.toggle('collapsed');
-        toggle.textContent = collapsed ? '▸' : '▾';
-      };
-
-      node.appendChild(row);
-      node.appendChild(children);
-    } else {
-      toggle.textContent = ' ';
-      label.innerHTML = this.renderFormattedCell(val, '', 0, 1);
-      row.appendChild(label);
-      node.appendChild(row);
+    const current = this.pathStack[this.pathStack.length - 1];
+    const previewData = this.tablePreviewData ?? (current ? current.data : this.rootData);
+    if (previewData === undefined || previewData === null) {
+      pre.innerHTML = '';
+      return;
     }
 
-    return node;
+    const collapsedPaths = new Set(
+      [...pre.querySelectorAll('.fmt-node.fmt-collapsed[data-fmt-path]')]
+        .map(node => node.dataset.fmtPath)
+    );
+
+    const renderKey = `${this.dataVersion}:${this.view}:${this.tablePreviewPath}:${JSON.stringify([...collapsedPaths].sort())}:${this.unquoteKeys}:${this.minify}`;
+    if (pre.dataset.renderKey === renderKey && pre.childNodes.length > 0) return;
+
+    pre.innerHTML = '';
+    pre.appendChild(this.buildFoldableNode(previewData, null, true, [], collapsedPaths));
+    pre.dataset.renderKey = renderKey;
   }
 
   decodeEntities(str) {
@@ -701,10 +651,12 @@ class JsonVisualizer {
   renderCurrentLevel() {
     this.renderBreadcrumbs();
     if (this.view === 'formatted') { this.renderFormattedView(); return; }
-    if (this.view === 'tree') { this.renderTreeView(); return; }
     this.formattedContainer.style.display = 'none';
-    this.treeContainer.style.display = 'none';
     this.tableContainer.style.display = '';
+
+    this.tablePreviewOpen = true;
+    this.tablePreviewData = this.pathStack[this.pathStack.length - 1]?.data ?? this.rootData;
+    this.tablePreviewPath = this.pathStack.map(entry => entry.label).join('') || '$';
 
     const current = this.pathStack[this.pathStack.length - 1];
     const targetData = current.data;
@@ -754,13 +706,35 @@ class JsonVisualizer {
     });
 
     this.applyFilter();
-
-    this.renderFormattedView('tableFormattedPre');
+    this.tablePreviewOpen = true;
+    this.tablePreviewData = this.pathStack[this.pathStack.length - 1]?.data ?? this.rootData;
+    this.tablePreviewPath = this.pathStack.map(entry => entry.label).join('') || '$';
+    this.renderTableFormattedPreview();
 
     this.tbody.onclick = (e) => {
       const btn = e.target.closest('[data-key]');
       const td = e.target.closest('td');
       const tr = e.target.closest('tr');
+
+      if (tr && !btn) {
+        const rowIndex = parseInt(tr.dataset.rowIndex, 10);
+        const selectedNode = Array.isArray(targetData) ? targetData[rowIndex] : targetData;
+        this.tablePreviewData = selectedNode;
+        this.tablePreviewPath = Array.isArray(targetData) ? `[${rowIndex}]` : '$';
+        this.tablePreviewOpen = true;
+        this.syncTableFormattedPanel();
+        this.renderTableFormattedPreview();
+        if (td) {
+          const cellIndex = Array.from(tr.cells).indexOf(td);
+          if (cellIndex > 0) {
+            const header = headers[cellIndex - 1];
+            const isParentArray = Array.isArray(targetData);
+            const suffix = isParentArray ? `.[${rowIndex}].${header}` : `.${header}`;
+            this.renderBreadcrumbs(suffix);
+          }
+        }
+        return;
+      }
 
       if (td && tr) {
         const cellIndex = Array.from(tr.cells).indexOf(td);
@@ -790,7 +764,11 @@ class JsonVisualizer {
       const baseLabel = isParentArray ? `[${rowIndex}].${key}` : key;
       const pathLabel = subKey ? `${baseLabel}.${subKey}` : baseLabel;
 
+      this.tablePreviewData = selectedNode;
+      this.tablePreviewPath = pathLabel;
       this.pathStack.push({ label: pathLabel, data: selectedNode });
+      this.tablePreviewOpen = true;
+      this.syncTableFormattedPanel();
       this.renderCurrentLevel();
     };
   }
