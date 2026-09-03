@@ -22,8 +22,6 @@ class JsonVisualizer {
     this.unquoteKeys = false;
     this.minify = false;
     this.tablePreviewOpen = false;
-    this.tablePreviewData = null;
-    this.tablePreviewPath = '$';
 
     this.rootData = null;
     this.pathStack = [];
@@ -265,8 +263,6 @@ class JsonVisualizer {
     this.tableContainer.style.display = view === 'table' ? '' : 'none';
     this.tableFormattedToggle.style.display = view === 'table' ? 'block' : 'none';
     this.tablePreviewOpen = view === 'table';
-    this.tablePreviewData = view === 'table' ? (this.pathStack[this.pathStack.length - 1]?.data ?? this.rootData) : null;
-    this.tablePreviewPath = view === 'table' ? this.pathStack.map(entry => entry.label).join('') || '$' : '$';
     this.syncTableFormattedPanel();
     document.getElementById('breadcrumbBar').style.visibility = view === 'table' ? 'visible' : 'hidden';
     const currentData = this.pathStack[this.pathStack.length - 1]?.data;
@@ -296,8 +292,7 @@ class JsonVisualizer {
       return;
     }
 
-    const current = this.pathStack[this.pathStack.length - 1];
-    const previewData = this.tablePreviewData ?? (current ? current.data : this.rootData);
+    const previewData = this.rootData;
     if (previewData === undefined || previewData === null) {
       pre.innerHTML = '';
       return;
@@ -308,7 +303,7 @@ class JsonVisualizer {
         .map(node => node.dataset.fmtPath)
     );
 
-    const renderKey = `${this.dataVersion}:${this.view}:${this.tablePreviewPath}:${JSON.stringify([...collapsedPaths].sort())}:${this.unquoteKeys}:${this.minify}`;
+    const renderKey = `${this.dataVersion}:${this.view}:${JSON.stringify([...collapsedPaths].sort())}:${this.unquoteKeys}:${this.minify}`;
     if (pre.dataset.renderKey === renderKey && pre.childNodes.length > 0) return;
 
     pre.innerHTML = '';
@@ -655,8 +650,6 @@ class JsonVisualizer {
     this.tableContainer.style.display = '';
 
     this.tablePreviewOpen = true;
-    this.tablePreviewData = this.pathStack[this.pathStack.length - 1]?.data ?? this.rootData;
-    this.tablePreviewPath = this.pathStack.map(entry => entry.label).join('') || '$';
 
     const current = this.pathStack[this.pathStack.length - 1];
     const targetData = current.data;
@@ -707,8 +700,6 @@ class JsonVisualizer {
 
     this.applyFilter();
     this.tablePreviewOpen = true;
-    this.tablePreviewData = this.pathStack[this.pathStack.length - 1]?.data ?? this.rootData;
-    this.tablePreviewPath = this.pathStack.map(entry => entry.label).join('') || '$';
     this.renderTableFormattedPreview();
 
     this.tbody.onclick = (e) => {
@@ -718,12 +709,6 @@ class JsonVisualizer {
 
       if (tr && !btn) {
         const rowIndex = parseInt(tr.dataset.rowIndex, 10);
-        const selectedNode = Array.isArray(targetData) ? targetData[rowIndex] : targetData;
-        this.tablePreviewData = selectedNode;
-        this.tablePreviewPath = Array.isArray(targetData) ? `[${rowIndex}]` : '$';
-        this.tablePreviewOpen = true;
-        this.syncTableFormattedPanel();
-        this.renderTableFormattedPreview();
         if (td) {
           const cellIndex = Array.from(tr.cells).indexOf(td);
           if (cellIndex > 0) {
@@ -764,11 +749,7 @@ class JsonVisualizer {
       const baseLabel = isParentArray ? `[${rowIndex}].${key}` : key;
       const pathLabel = subKey ? `${baseLabel}.${subKey}` : baseLabel;
 
-      this.tablePreviewData = selectedNode;
-      this.tablePreviewPath = pathLabel;
       this.pathStack.push({ label: pathLabel, data: selectedNode });
-      this.tablePreviewOpen = true;
-      this.syncTableFormattedPanel();
       this.renderCurrentLevel();
     };
   }
