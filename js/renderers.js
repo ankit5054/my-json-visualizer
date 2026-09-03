@@ -1,4 +1,4 @@
-// Renderers Module - View rendering (formatted, tree, table)
+// Renderers Module - View rendering (formatted, table)
 class Renderers {
   constructor(utils, filters) {
     this.utils = utils;
@@ -22,77 +22,6 @@ class Renderers {
     
     const formatted = this.utils.formatJsonOutput(data, options);
     pre.innerHTML = this.utils.syntaxHighlight(formatted);
-  }
-
-  renderTreeView(data, containerId = 'treeContainer') {
-    const container = document.getElementById(containerId);
-    if (!container || !data) return;
-    container.innerHTML = '';
-    container.appendChild(this.buildTreeNode(data, null));
-  }
-
-  buildTreeNode(val, key) {
-    const node = document.createElement('div');
-    node.className = 'tree-node';
-
-    const row = document.createElement('div');
-    row.className = 'tree-row';
-
-    const toggle = document.createElement('span');
-    toggle.className = 'tree-toggle';
-
-    const label = document.createElement('span');
-
-    const isComplex = val !== null && typeof val === 'object';
-
-    if (key !== null) {
-      const keySpan = document.createElement('span');
-      keySpan.className = 'tree-key';
-      keySpan.textContent = key;
-      const colon = document.createElement('span');
-      colon.className = 'tree-colon';
-      colon.textContent = ': ';
-      row.appendChild(toggle);
-      row.appendChild(keySpan);
-      row.appendChild(colon);
-    } else {
-      row.appendChild(toggle);
-    }
-
-    if (isComplex) {
-      const isArr = Array.isArray(val);
-      const count = isArr ? val.length : Object.keys(val).length;
-      const meta = document.createElement('span');
-      meta.className = 'tree-meta';
-      meta.textContent = isArr ? `[ ${count} items ]` : `{ ${count} keys }`;
-      toggle.textContent = '▾';
-      row.appendChild(meta);
-
-      const children = document.createElement('div');
-      children.className = 'tree-children';
-
-      if (isArr) {
-        val.forEach((item, i) => children.appendChild(this.buildTreeNode(item, String(i))));
-      } else {
-        Object.entries(val).forEach(([k, v]) => children.appendChild(this.buildTreeNode(v, k)));
-      }
-
-      toggle.onclick = (e) => {
-        e.stopPropagation();
-        const collapsed = children.classList.toggle('collapsed');
-        toggle.textContent = collapsed ? '▸' : '▾';
-      };
-
-      node.appendChild(row);
-      node.appendChild(children);
-    } else {
-      toggle.textContent = ' ';
-      label.innerHTML = this.utils.renderFormattedCellTree(val);
-      row.appendChild(label);
-      node.appendChild(row);
-    }
-
-    return node;
   }
 
   renderTableView(data, pathStack, options = {}) {
